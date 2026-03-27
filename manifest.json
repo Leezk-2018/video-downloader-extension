@@ -7,13 +7,23 @@
     "activeTab",
     "scripting",
     "storage",
-    "downloads"
+    "downloads",
+    "notifications"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://www.xiaohongshu.com/*",
     "https://loader.to/*",
     "https://p.savenow.to/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["popup.css"],
+      "matches": ["<all_urls>"]
+    }
   ],
   "action": {
     "default_popup": "popup.html",
