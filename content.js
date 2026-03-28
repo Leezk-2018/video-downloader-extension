@@ -343,26 +343,26 @@
     const videoIdMatch = window.location.href.match(/[?&]v=([a-zA-Z0-9_-]{11})|\/shorts\/([a-zA-Z0-9_-]{11})/);
     const id = videoIdMatch?.[1] || videoIdMatch?.[2];
     
-    console.log('[VD-PRO Debug] YT Init - ID:', id);
+    console.log('[PureDown Pro Debug] YT Init - ID:', id);
     if (!id) {
-      console.error('[VD-PRO Debug] YT ID extraction failed');
+      console.error('[PureDown Pro Debug] YT ID extraction failed');
       return;
     }
 
     const img = shadowRoot.getElementById('yt-thumb');
     const thumbUrl = `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
-    console.log('[VD-PRO Debug] YT Thumb URL:', thumbUrl);
+    console.log('[PureDown Pro Debug] YT Thumb URL:', thumbUrl);
     
     img.src = thumbUrl;
-    img.onload = () => console.log('[VD-PRO Debug] YT Thumb loaded');
+    img.onload = () => console.log('[PureDown Pro Debug] YT Thumb loaded');
     img.onerror = () => { 
-      console.warn('[VD-PRO Debug] YT MaxRes failed, using HQ');
+      console.warn('[PureDown Pro Debug] YT MaxRes failed, using HQ');
       img.src = `https://img.youtube.com/vi/${id}/hqdefault.jpg`; 
     };
 
     const title = document.title.replace(' - YouTube', '');
     const channel = document.querySelector('#channel-name a')?.textContent || '';
-    console.log('[VD-PRO Debug] YT Metadata:', { title, channel });
+    console.log('[PureDown Pro Debug] YT Metadata:', { title, channel });
 
     shadowRoot.getElementById('yt-title').textContent = title;
     shadowRoot.getElementById('yt-channel').textContent = channel;
