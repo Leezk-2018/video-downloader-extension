@@ -1,19 +1,29 @@
 {
   "manifest_version": 3,
-  "name": "视频下载器 Pro",
-  "version": "2.0.0",
+  "name": "PureDown Pro",
+  "version": "3.0.0",
   "description": "支持 YouTube、YouTube Shorts、小红书视频一键下载",
   "permissions": [
     "activeTab",
     "scripting",
     "storage",
-    "downloads"
+    "downloads",
+    "notifications"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://www.xiaohongshu.com/*",
     "https://loader.to/*",
     "https://p.savenow.to/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["popup.css"],
+      "matches": ["<all_urls>"]
+    }
   ],
   "action": {
     "default_popup": "popup.html",

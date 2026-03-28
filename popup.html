@@ -1,371 +1,192 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>视频下载器 Pro</title>
+  <title>PureDown Pro - 设置</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
     :root {
-      --bg: #0D0D0D;
-      --bg2: #181818;
-      --bg3: #242424;
-      --border: #2E2E2E;
-      --text: #F0F0F0;
-      --gray: #888;
-      --gray2: #555;
-      --yt-red: #FF0000;
-      --xhs-red: #FF2441;
-      --green: #1DB954;
+      --primary: #0066FF;
+      --bg: #FFFFFF;
+      --text-main: #1D1D1F;
+      --text-sub: #86868B;
+      --border: #E5E5EA;
+      --card-bg: #F5F5F7;
     }
-
+    
     body {
-      width: 360px;
+      width: 240px;
+      margin: 0;
+      padding: 16px;
       background: var(--bg);
-      color: var(--text);
-      font-family: 'Noto Sans SC', sans-serif;
-      font-size: 13px;
-      overflow: hidden;
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Header ── */
+    /* Header */
     .header {
-      padding: 14px 16px 12px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--border);
+      gap: 10px;
+      margin-bottom: 16px;
     }
-    .header-left { display: flex; align-items: center; gap: 10px; }
-    .header-logo {
-      width: 32px; height: 32px;
-      background: linear-gradient(135deg, #FF0000, #FF2441);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
+    
+    .logo-icon {
+      width: 24px;
+      height: 24px;
+      background: var(--primary);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
     }
-    .header-logo svg { width: 18px; height: 18px; }
-    .header-title { font-size: 14px; font-weight: 700; letter-spacing: 0.2px; }
-    .header-version {
-      font-size: 10px; color: var(--gray2);
-      background: var(--bg3);
-      padding: 2px 6px; border-radius: 10px;
-    }
-
-    /* ── Platform badge ── */
-    .platform-badge {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 3px 8px; border-radius: 20px;
-      font-size: 11px; font-weight: 600;
-      margin-bottom: 10px;
-    }
-    .platform-badge.youtube { background: rgba(255,0,0,0.12); color: #FF5555; border: 1px solid rgba(255,0,0,0.2); }
-    .platform-badge.xhs { background: rgba(255,36,65,0.12); color: #FF6077; border: 1px solid rgba(255,36,65,0.2); }
-    .platform-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
-    .platform-badge.youtube .dot { background: #FF0000; }
-    .platform-badge.xhs .dot { background: #FF2441; }
-
-    /* ── Body ── */
-    .body { padding: 14px 16px; }
-    .state { display: none; }
-    .state.active { display: block; }
-
-    /* Not supported page */
-    .not-supported { text-align: center; padding: 24px 12px; }
-    .not-supported .icon { font-size: 40px; margin-bottom: 10px; }
-    .not-supported .title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
-    .not-supported p { color: var(--gray); font-size: 12px; line-height: 1.7; }
-    .supported-list {
-      margin-top: 14px; text-align: left;
-      background: var(--bg2); border-radius: 10px; padding: 12px;
-    }
-    .supported-item {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 12px; color: var(--gray); padding: 4px 0;
-    }
-    .supported-item .badge {
-      font-size: 10px; font-weight: 700; padding: 1px 6px;
-      border-radius: 4px; flex-shrink: 0;
-    }
-    .badge-yt { background: rgba(255,0,0,0.2); color: #FF5555; }
-    .badge-xhs { background: rgba(255,36,65,0.2); color: #FF6077; }
-
-    /* Loading */
-    .loading-state { text-align: center; padding: 32px; }
-    .spinner {
-      width: 32px; height: 32px;
-      border: 3px solid var(--bg3); border-top-color: var(--yt-red);
-      border-radius: 50%; animation: spin 0.8s linear infinite;
-      margin: 0 auto 10px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-state p { color: var(--gray); font-size: 12px; }
-
-    /* Thumb */
-    .video-thumb {
-      width: 100%; height: 168px;
-      border-radius: 10px; overflow: hidden;
-      background: var(--bg3); margin-bottom: 12px; position: relative;
-    }
-    .video-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .video-thumb .type-tag {
-      position: absolute; top: 8px; left: 8px;
-      font-size: 10px; font-weight: 700; padding: 2px 7px;
-      border-radius: 4px; backdrop-filter: blur(4px);
-    }
-    .type-tag.youtube { background: rgba(255,0,0,0.8); color: white; }
-    .type-tag.shorts { background: rgba(0,0,0,0.75); color: white; }
-    .type-tag.xhs { background: rgba(255,36,65,0.85); color: white; }
-
-    .video-title {
-      font-size: 13px; font-weight: 500; line-height: 1.5;
-      margin-bottom: 3px;
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-    }
-    .video-meta { font-size: 11px; color: var(--gray); margin-bottom: 14px; }
-
-    /* XHS notice */
-    .xhs-notice {
-      background: var(--bg2); border: 1px solid var(--border);
-      border-radius: 8px; padding: 9px 11px;
-      font-size: 11px; color: var(--gray); line-height: 1.6;
-      margin-bottom: 14px;
-    }
-    .xhs-notice strong { color: #FF6077; }
-
-    /* Divider */
-    .divider { height: 1px; background: var(--border); margin: 12px 0; }
-
-    /* Section label */
-    .section-label {
-      font-size: 10px; color: var(--gray2);
-      text-transform: uppercase; letter-spacing: 0.8px;
-      font-weight: 600; margin-bottom: 7px;
+    
+    .header h2 {
+      font-size: 14px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.2px;
     }
 
-    /* Format */
-    .format-row { display: flex; gap: 6px; margin-bottom: 12px; }
-    .format-btn {
-      flex: 1; background: var(--bg3); border: 1.5px solid transparent;
-      border-radius: 8px; padding: 8px; text-align: center;
-      cursor: pointer; font-family: inherit; color: var(--text);
-      font-size: 12px; font-weight: 500; transition: all 0.15s;
-    }
-    .format-btn:hover { border-color: rgba(255,255,255,0.15); }
-    .format-btn.selected { border-color: var(--yt-red); background: rgba(255,0,0,0.1); color: #FF6666; }
-
-    /* Quality */
-    .quality-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 5px; margin-bottom: 14px; }
-    .quality-btn {
-      background: var(--bg3); border: 1.5px solid transparent;
-      border-radius: 7px; padding: 7px 4px; text-align: center;
-      cursor: pointer; transition: all 0.15s; color: var(--text); font-family: inherit;
-    }
-    .quality-btn .q-label { font-size: 12px; font-weight: 600; display: block; }
-    .quality-btn .q-sub { font-size: 9px; color: var(--gray); display: block; margin-top: 1px; }
-    .quality-btn:hover { border-color: rgba(255,255,255,0.15); }
-    .quality-btn.selected { border-color: var(--yt-red); background: rgba(255,0,0,0.1); }
-    .quality-btn.selected .q-label { color: #FF6666; }
-
-    /* Download button */
-    .download-btn {
-      width: 100%; border: none; border-radius: 9px; padding: 12px;
-      font-size: 14px; font-weight: 600; font-family: inherit;
-      cursor: pointer; display: flex; align-items: center; justify-content: center;
-      gap: 8px; transition: all 0.2s; letter-spacing: 0.3px; color: white;
-    }
-    .download-btn.yt-style { background: linear-gradient(135deg, #FF0000, #CC0000); }
-    .download-btn.xhs-style { background: linear-gradient(135deg, #FF2441, #CC1030); }
-    .download-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255,0,0,0.3); }
-    .download-btn:active { transform: translateY(0); }
-    .download-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
-
-    /* Progress */
-    .progress-wrap { margin-top: 10px; display: none; }
-    .progress-wrap.show { display: block; }
-    .progress-bar-bg { height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
-    .progress-bar-fill {
-      height: 100%; border-radius: 2px; width: 0%;
-      transition: width 0.4s ease;
-      background: linear-gradient(90deg, #FF0000, #FF6666);
-    }
-    .progress-label { font-size: 10px; color: var(--gray); margin-top: 5px; text-align: center; }
-
-    /* Error */
-    .error-msg {
-      background: rgba(255,68,68,0.1); border: 1px solid rgba(255,68,68,0.25);
-      border-radius: 8px; padding: 9px 11px;
-      font-size: 11px; color: #FF9999; margin-top: 10px;
-      line-height: 1.5; display: none;
-    }
-    .error-msg.show { display: block; }
-
-    /* XHS page – image grid */
-    .xhs-media-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+    /* 状态感应区 */
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 12px;
+      background: var(--card-bg);
+      border-radius: 12px;
       margin-bottom: 12px;
+      border: 0.5px solid var(--border);
     }
-    .xhs-media-item {
-      aspect-ratio: 1; border-radius: 6px; overflow: hidden;
-      background: var(--bg3); position: relative; cursor: pointer;
+    
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #AEAEB2;
     }
-    .xhs-media-item img { width: 100%; height: 100%; object-fit: cover; }
-    .xhs-media-item .play-icon {
-      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-      background: rgba(0,0,0,0.3);
+    
+    .status-dot.active { background: #34C759; }
+    
+    .status-text {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-sub);
     }
+
+    /* 设置项卡片 */
+    .setting-card {
+      background: var(--bg);
+      border: 0.5px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    }
+    
+    .setting-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    
+    .setting-label {
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .setting-desc {
+      font-size: 10px;
+      color: var(--text-sub);
+    }
+
+    /* iOS Toggle Switch */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+    }
+    
+    .switch input { opacity: 0; width: 0; height: 0; }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #E5E5EA;
+      transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 20px;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px; width: 16px;
+      left: 2px; bottom: 2px;
+      background-color: white;
+      transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    input:checked + .slider { background-color: #34C759; }
+    input:checked + .slider:before { transform: translateX(16px); }
+
+    /* Footer Links */
+    .footer {
+      margin-top: 16px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+    
+    .footer-link {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--primary);
+      text-decoration: none;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    }
+    
+    .footer-link:hover { opacity: 1; }
   </style>
 </head>
 <body>
-
-<div class="header">
-  <div class="header-left">
-    <div class="header-logo">
-      <svg viewBox="0 0 24 24" fill="white">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+  <div class="header">
+    <div class="logo-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
       </svg>
     </div>
-    <span class="header-title">视频下载器 Pro</span>
-  </div>
-  <span class="header-version">v2.0</span>
-</div>
-
-<div class="body">
-
-  <!-- 不支持的页面 -->
-  <div class="state" id="state-not-supported">
-    <div class="not-supported">
-      <div class="icon">🎬</div>
-      <div class="title">请打开支持的视频页面</div>
-      <p>导航到以下任意页面后再点击插件图标</p>
-      <div class="supported-list">
-        <div class="supported-item">
-          <span class="badge badge-yt">YT</span>
-          youtube.com/watch — 普通视频
-        </div>
-        <div class="supported-item">
-          <span class="badge badge-yt">YT</span>
-          youtube.com/shorts — 短视频
-        </div>
-        <div class="supported-item">
-          <span class="badge badge-xhs">XHS</span>
-          xiaohongshu.com — 小红书视频
-        </div>
-      </div>
-    </div>
+    <h2>PureDown Pro</h2>
   </div>
 
-
-  <!-- 小红书非笔记页提示 -->
-  <div class="state" id="state-xhs-hint">
-    <div class="not-supported">
-      <div class="icon">📖</div>
-      <div class="title">请打开具体的笔记页面</div>
-      <p>当前页面不是小红书笔记，<br>插件无法提取视频或图片。</p>
-      <div class="supported-list">
-        <div class="supported-item" style="flex-direction:column;align-items:flex-start;gap:4px">
-          <span style="color:#FF6077;font-weight:600;font-size:11px">✅ 支持的页面格式：</span>
-          <span style="font-size:11px;color:#888;word-break:break-all">xiaohongshu.com/explore/{笔记ID}</span>
-          <span style="font-size:11px;color:#888;word-break:break-all">xiaohongshu.com/discovery/item/{ID}</span>
-        </div>
-        <div class="supported-item" style="flex-direction:column;align-items:flex-start;gap:4px;margin-top:6px">
-          <span style="color:#666;font-weight:600;font-size:11px">❌ 不支持的页面：</span>
-          <span style="font-size:11px;color:#555">首页、搜索页、个人主页</span>
-        </div>
-      </div>
-      <p style="margin-top:12px;font-size:11px;color:#555">请点击进入一个具体笔记后再使用</p>
-    </div>
+  <div class="status-badge" id="page-status">
+    <div class="status-dot" id="status-dot"></div>
+    <span class="status-text" id="status-text">正在检测页面...</span>
   </div>
 
-  <!-- 加载中 -->
-  <div class="state" id="state-loading">
-    <div class="loading-state">
-      <div class="spinner"></div>
-      <p>正在读取页面信息...</p>
+  <div class="setting-card">
+    <div class="setting-info">
+      <span class="setting-label">悬浮下载球</span>
+      <span class="setting-desc">开启后显示右下角按钮</span>
     </div>
+    <label class="switch">
+      <input type="checkbox" id="toggle-btn">
+      <span class="slider"></span>
+    </label>
   </div>
 
-  <!-- YouTube 主界面 -->
-  <div class="state" id="state-youtube">
-    <div class="video-thumb">
-      <img id="yt-thumb" src="" alt="封面">
-      <span class="type-tag" id="yt-type-tag">YouTube</span>
-    </div>
-    <div class="video-title" id="yt-title">加载中...</div>
-    <div class="video-meta" id="yt-channel"></div>
-
-    <div class="divider"></div>
-
-    <div class="section-label">格式</div>
-    <div class="format-row">
-      <button class="format-btn selected" data-format="mp4">🎬 MP4 视频</button>
-      <button class="format-btn" data-format="mp3">🎵 MP3 音频</button>
-    </div>
-
-    <div class="section-label" id="quality-label">画质</div>
-    <div class="quality-grid" id="quality-grid">
-      <button class="quality-btn" data-quality="2160">
-        <span class="q-label">4K</span><span class="q-sub">2160p</span>
-      </button>
-      <button class="quality-btn selected" data-quality="1080">
-        <span class="q-label">全高清</span><span class="q-sub">1080p</span>
-      </button>
-      <button class="quality-btn" data-quality="720">
-        <span class="q-label">高清</span><span class="q-sub">720p</span>
-      </button>
-      <button class="quality-btn" data-quality="480">
-        <span class="q-label">标清</span><span class="q-sub">480p</span>
-      </button>
-    </div>
-
-    <button class="download-btn yt-style" id="yt-download-btn">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-        <polyline points="7 10 12 15 17 10"/>
-        <line x1="12" y1="15" x2="12" y2="3"/>
-      </svg>
-      立即下载
-    </button>
-
-    <div class="progress-wrap" id="yt-progress-wrap">
-      <div class="progress-bar-bg"><div class="progress-bar-fill" id="yt-progress-fill"></div></div>
-      <div class="progress-label" id="yt-progress-label">准备中...</div>
-    </div>
-    <div class="error-msg" id="yt-error-msg"></div>
+  <div class="footer" style="opacity: 0.6; font-size: 10px; font-weight: 600; color: var(--text-sub);">
+    by@校长办公室
   </div>
 
-  <!-- 小红书主界面 -->
-  <div class="state" id="state-xhs">
-    <div class="video-thumb">
-      <img id="xhs-thumb" src="" alt="封面">
-      <span class="type-tag xhs">小红书</span>
-    </div>
-    <div class="video-title" id="xhs-title">加载中...</div>
-    <div class="video-meta" id="xhs-author"></div>
-
-    <div class="xhs-notice">
-      <strong>说明：</strong>小红书视频直接从页面提取原始链接，无水印。图文笔记将下载所有图片。
-    </div>
-
-    <button class="download-btn xhs-style" id="xhs-download-btn">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-        <polyline points="7 10 12 15 17 10"/>
-        <line x1="12" y1="15" x2="12" y2="3"/>
-      </svg>
-      下载视频 / 图片
-    </button>
-
-    <div class="progress-wrap" id="xhs-progress-wrap">
-      <div class="progress-bar-bg"><div class="progress-bar-fill" id="xhs-progress-fill"></div></div>
-      <div class="progress-label" id="xhs-progress-label">准备中...</div>
-    </div>
-    <div class="error-msg" id="xhs-error-msg"></div>
-  </div>
-
-</div>
-
-<script src="popup.js"></script>
+  <script src="popup.js"></script>
 </body>
 </html>
