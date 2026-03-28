@@ -77,14 +77,9 @@ async function handleXhsExtract(tabId) {
 
 // 复用原本的小红书媒体提取逻辑 (由于 content.js 无法直接访问 MAIN world，所以放在 BG 中触发)
 function extractXhsMedia() {
-  const videos   = [];
-  const images   = [];
-  function addVideo(url) {
-    if (!url || typeof url !== 'string') return;
-    url = url.trim().replace(/\\u002F/g, '/');
-    if (url.startsWith('blob:') || url.length < 20 || videos.includes(url)) return;
-    videos.push(url);
-  }
+  const images = [];
+  const allVideoLinks = [];
+
   function addImage(url) {
     if (!url || typeof url !== 'string') return;
     url = url.trim().replace(/\\u002F/g, '/');
@@ -111,27 +106,73 @@ function extractXhsMedia() {
         const seen = new WeakSet();
         function walk(obj, depth) {
           if (!obj || depth > 15 || (typeof obj === 'object' && seen.has(obj))) return;
-          if (typeof obj === 'object') seen.add(obj);
+          if (typeof obj === 'object') {
+            seen.add(obj);
+            if (obj.masterUrl) allVideoLinks.push(obj.masterUrl);
+            if (obj.h265Url)   allVideoLinks.push(obj.h265Url);
+            if (obj.h264Url)   allVideoLinks.push(obj.h264Url);
+            if (Array.isArray(obj.backupUrls)) obj.backupUrls.forEach(u => allVideoLinks.push(u));
+          }
           if (typeof obj === 'string') {
-            if (/sns-video|\.mp4/.test(obj)) addVideo(obj);
+            if (/sns-video|\.mp4/.test(obj)) allVideoLinks.push(obj);
             if (/sns-img|sns-webpcdn|ci\.xiaohongshu/.test(obj)) addImage(obj);
             return;
           }
           if (Array.isArray(obj)) { obj.forEach(i => walk(i, depth + 1)); return; }
-          ['masterUrl', 'url', 'h264Url', 'h265Url', 'backupUrls', 'imageScene', 'urlPre', 'urlDefault', 'infoList'].forEach(k => { if (obj[k]) walk(obj[k], depth + 1); });
+          ['imageScene', 'urlPre', 'urlDefault', 'infoList'].forEach(k => { if (obj[k]) walk(obj[k], depth + 1); });
           Object.values(obj).forEach(v => { if (v) walk(v, depth + 1); });
         }
         walk(scope, 0);
       }
     }
     document.querySelectorAll('video').forEach(v => {
-      addVideo(v.src);
-      v.querySelectorAll('source').forEach(s => addVideo(s.src || s.getAttribute('src')));
+      if (v.src) allVideoLinks.push(v.src);
+      v.querySelectorAll('source').forEach(s => allVideoLinks.push(s.src || s.getAttribute('src')));
     });
   } catch (e) {}
 
+  // 🌟 核心逻辑：高级去重、权重排序与过滤 🌟
+  const uniqueVideos = [];
+  const hashSeen = new Set();
+
+  const cleanedList = allVideoLinks.map(raw => {
+    const url = raw.trim().replace(/\\u002F/g, '/');
+    const base = url.split('?')[0]; 
+    const hasParams = url.includes('?');
+    const hashMatch = base.match(/\/([a-z0-9]{30,})/i);
+    const hash = hashMatch ? hashMatch[1] : base;
+    
+    // 识别 259 后缀（带水印）
+    const isWatermarked = base.includes('_259.mp4');
+    
+    // 计算权重：越高越清晰
+    let weight = 0;
+    if (base.includes('1080')) weight += 100;
+    if (base.includes('h265')) weight += 50;
+    if (base.includes('720'))  weight += 30;
+    if (!hasParams)            weight += 10; // 无参数通常更原始
+    
+    return { url, base, hash, hasParams, isWatermarked, weight };
+  }).filter(item => item.base.startsWith('http'));
+
+  // 排序：权重越高越靠前，同权重下无参数优先
+  cleanedList.sort((a, b) => b.weight - a.weight);
+
+  for (const item of cleanedList) {
+    if (!hashSeen.has(item.hash)) {
+      hashSeen.add(item.hash);
+      uniqueVideos.push({
+        url: item.url,
+        isWatermarked: item.isWatermarked,
+        weight: item.weight
+      });
+    }
+  }
+
+  console.log('[XHS Debug] 智能排序后的所有源:', uniqueVideos);
+
   return {
-    videos: [...new Set(videos)].filter(u => u && u.startsWith('http') && u.includes('sns-video')),
+    videos: uniqueVideos, 
     images: [...new Set(images)].filter(u => u && u.startsWith('http'))
   };
 }

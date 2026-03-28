@@ -273,10 +273,17 @@
           <section id="state-xhs" class="state">
             <div class="media-card">
               <div class="xhs-preview"><img id="xhs-thumb" src="" alt=""><div class="xhs-overlay"><h2 id="xhs-title" class="truncate"></h2><p id="xhs-author" class="sub-info"></p></div></div>
-              <div class="controls">
-                <p class="hint-text">✨ 提取 CDN 原始链接，无水印下载</p>
+              <div class="controls" style="padding: 12px;">
+                <p id="xhs-status-hint" class="hint-text" style="margin-bottom: 12px;">正在检测媒体资源...</p>
                 <div id="xhs-progress-wrap" class="progress-container"><div class="progress-bar"><div id="xhs-progress-fill" class="progress-fill"></div></div><p id="xhs-progress-label" class="progress-text">准备就绪</p></div>
-                <button id="xhs-download-btn" class="main-btn xhs-btn">下载视频 / 图片</button>
+                
+                <!-- 三连按钮组 -->
+                <div id="xhs-btn-group" style="display: flex; gap: 8px; margin-top: 12px;">
+                  <button id="xhs-hd-btn" class="main-btn" style="margin-top:0; flex:1; font-size:11px; padding:10px 0;">高清版</button>
+                  <button id="xhs-nowm-btn" class="main-btn" style="margin-top:0; flex:1; font-size:11px; padding:10px 0; background:#34C759; box-shadow: 0 4px 12px rgba(52, 199, 89, 0.2);">无水印版</button>
+                  <button id="xhs-all-btn" class="main-btn" style="margin-top:0; flex:1; font-size:11px; padding:10px 0; background:#8E8E93; box-shadow: 0 4px 12px rgba(142, 142, 147, 0.2);">全部</button>
+                </div>
+                <button id="xhs-download-btn" class="main-btn xhs-btn" style="display:none">下载图片</button>
                 <p id="xhs-error-msg" class="error-text"></p>
               </div>
             </div>
@@ -289,7 +296,12 @@
     shadowRoot.querySelectorAll('.format-btn').forEach(btn => btn.onclick = () => selectFormat(btn));
     shadowRoot.querySelectorAll('.quality-btn').forEach(btn => btn.onclick = () => selectQuality(btn));
     shadowRoot.getElementById('yt-download-btn').onclick = startYouTubeDownload;
-    shadowRoot.getElementById('xhs-download-btn').onclick = startXhsDownload;
+    
+    // 小红书按钮绑定
+    shadowRoot.getElementById('xhs-hd-btn').onclick = () => startXhsDownload('hd');
+    shadowRoot.getElementById('xhs-nowm-btn').onclick = () => startXhsDownload('nowm');
+    shadowRoot.getElementById('xhs-all-btn').onclick = () => startXhsDownload('all');
+    shadowRoot.getElementById('xhs-download-btn').onclick = () => startXhsDownload('images');
   }
 
   function togglePanel() {
@@ -304,9 +316,23 @@
     const isYT = url.includes('youtube.com/watch') || url.includes('youtube.com/shorts/');
     const isXHS = url.includes('xiaohongshu.com/explore/');
     shadowRoot.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
-    if (isYT) initYouTubeUI();
-    else if (isXHS) initXhsUI();
-    else {
+    
+    if (isYT) {
+      initYouTubeUI();
+    } else if (isXHS) {
+      initXhsUI();
+      // 动态获取数量并更新提示
+      chrome.runtime.sendMessage({ type: 'EXEC_XHS_EXTRACT' }).then(media => {
+        const hint = shadowRoot.getElementById('xhs-status-hint');
+        if (media && media.videos) {
+          const vCount = media.videos.length;
+          const wmCount = media.videos.filter(v => v.isWatermarked).length;
+          hint.textContent = `已检测到 ${vCount} 个视频源 (包含 ${wmCount} 个带水印)`;
+        } else {
+          hint.textContent = '未检测到视频资源';
+        }
+      });
+    } else {
       shadowRoot.getElementById('state-loading').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>请在视频或笔记详情页使用</p></div>`;
       shadowRoot.getElementById('state-loading').classList.add('active');
     }
@@ -351,26 +377,54 @@
     shadowRoot.getElementById('xhs-title').textContent = document.title.replace(/ [-|] 小红书$/, '');
     shadowRoot.getElementById('xhs-author').textContent = document.querySelector('.username')?.textContent || '';
     shadowRoot.getElementById('xhs-thumb').src = document.querySelector('meta[property="og:image"]')?.content || '';
+    
+    // 动态调整按钮显示：如果是图片笔记，只显示一个下载图片按钮
+    const isVideo = document.querySelector('video') || window.location.href.includes('/explore/'); 
+    // 这里的判断可以优化，但在 init 时我们可以先根据页面特征预设
+    
     shadowRoot.getElementById('state-xhs').classList.add('active');
   }
 
-  async function startXhsDownload() {
-    const btn = shadowRoot.getElementById('xhs-download-btn');
+  async function startXhsDownload(mode) {
+    const errorEl = shadowRoot.getElementById('xhs-error-msg');
     const wrap = shadowRoot.getElementById('xhs-progress-wrap');
-    btn.disabled = true;
-    btn.innerHTML = `<div class="loader" style="width:14px;height:14px;margin:0;border-width:2px"></div> 分析中...`;
+    errorEl.classList.remove('show');
     wrap.classList.add('show');
+
     try {
       const media = await chrome.runtime.sendMessage({ type: 'EXEC_XHS_EXTRACT' });
-      if (!media || (!media.videos?.length && !media.images?.length)) throw new Error('未提取到内容');
-      const urls = media.videos?.length ? media.videos : media.images;
-      const typeLabel = media.videos?.length ? '视频' : '图片';
+      if (!media) throw new Error('提取失败');
+
+      let urls = [];
+      let typeLabel = '视频';
+
+      if (mode === 'images' || (media.images.length > 0 && media.videos.length === 0)) {
+        urls = media.images;
+        typeLabel = '图片';
+      } else {
+        const vList = media.videos; // [{url, isWatermarked}, ...]
+        if (vList.length === 0) throw new Error('未检测到视频');
+
+        if (mode === 'hd') {
+          // 高清版：直接取列表中的第一个（最前面的通常是码率最高或 masterUrl）
+          // 不管它是不是 259 版本，只要它是第一顺位
+          urls = [vList[0].url];
+        } else if (mode === 'nowm') {
+          // 无水印版：严格过滤掉 isWatermarked (即包含 _259.mp4) 的链接
+          const clean = vList.filter(v => !v.isWatermarked);
+          if (clean.length === 0) throw new Error('抱歉，未找到无水印版本');
+          urls = [clean[0].url];
+        } else if (mode === 'all') {
+          // 全部：取所有 url
+          urls = vList.map(v => v.url);
+        }
+      }
+
+      if (urls.length === 0) throw new Error('未检测到可下载的内容');
       chrome.runtime.sendMessage({ type: 'START_XHS_DOWNLOAD', urls, type_label: typeLabel });
     } catch (e) {
-      btn.disabled = false;
-      btn.innerHTML = '下载视频 / 图片';
-      shadowRoot.getElementById('xhs-error-msg').textContent = '❌ ' + e.message;
-      shadowRoot.getElementById('xhs-error-msg').classList.add('show');
+      errorEl.textContent = '❌ ' + e.message;
+      errorEl.classList.add('show');
     }
   }
 
