@@ -424,22 +424,34 @@
         img.style.display = 'none';
       }
 
-      // 🌟 核心：根据 noteType 切换按钮显示
+      // 🌟 核心：根据资源存在情况动态切换 UI
       const btnGroup = shadowRoot.getElementById('xhs-btn-group');
       const singleBtn = shadowRoot.getElementById('xhs-download-btn');
       const hint = shadowRoot.getElementById('xhs-status-hint');
 
-      if (media?.noteType === 'video') {
-        btnGroup.style.display = 'flex';
-        singleBtn.style.display = 'none';
+      const hasVideos = media?.videos && media.videos.length > 0;
+      const hasImages = media?.images && media.images.length > 0;
+
+      // 动态显隐：视频有就显示组，图片有就显示大按钮
+      btnGroup.style.display = hasVideos ? 'flex' : 'none';
+      singleBtn.style.display = hasImages ? 'block' : 'none';
+
+      // 智能合成提示语
+      if (hasVideos && hasImages) {
+        const vCount = media.videos.length;
+        const iCount = media.images.length;
+        hint.textContent = `检测到 ${vCount} 个视频资源 & ${iCount} 张笔记图片`;
+        singleBtn.style.marginTop = '12px'; 
+        singleBtn.textContent = '下载全部高清图片';
+      } else if (hasVideos) {
         const vCount = media.videos.length;
         const wmCount = media.videos.filter(v => v.isWatermarked).length;
         hint.textContent = `已检测到 ${vCount} 个视频源 (包含 ${wmCount} 个带水印)`;
+      } else if (hasImages) {
+        hint.textContent = `已检测到 ${media.images.length} 张笔记图片`;
+        singleBtn.textContent = '下载全部高清图片';
       } else {
-        btnGroup.style.display = 'none';
-        singleBtn.style.display = 'block';
-        singleBtn.textContent = '下载全部图片';
-        hint.textContent = `已检测到 ${media?.images?.length || 0} 张笔记图片`;
+        hint.textContent = '未检测到可下载媒体';
       }
     });
 
@@ -461,24 +473,21 @@
       let urls = [];
       let typeLabel = '视频';
 
-      if (mode === 'images' || (media.images.length > 0 && media.videos.length === 0)) {
+      // 🌟 严格区分模式：只有显式指定为 images 或者是纯图片笔记时才走图片逻辑
+      if (mode === 'images') {
         urls = media.images;
         typeLabel = '图片';
       } else {
-        const vList = media.videos; // [{url, isWatermarked}, ...]
-        if (vList.length === 0) throw new Error('未检测到视频');
+        const vList = media.videos;
+        if (!vList || vList.length === 0) throw new Error('未检测到视频');
 
         if (mode === 'hd') {
-          // 高清版：直接取列表中的第一个（最前面的通常是码率最高或 masterUrl）
-          // 不管它是不是 259 版本，只要它是第一顺位
           urls = [vList[0].url];
         } else if (mode === 'nowm') {
-          // 无水印版：严格过滤掉 isWatermarked (即包含 _259.mp4) 的链接
           const clean = vList.filter(v => !v.isWatermarked);
           if (clean.length === 0) throw new Error('抱歉，未找到无水印版本');
           urls = [clean[0].url];
         } else if (mode === 'all') {
-          // 全部：取所有 url
           urls = vList.map(v => v.url);
         }
       }
@@ -511,7 +520,8 @@
       shadowRoot.getElementById(`${prefix}-error-msg`).classList.add('show');
       btn.disabled = false;
       btn.classList.remove('loading');
-      btn.innerHTML = prefix === 'xhs' ? '下载视频 / 图片' : DOWNLOAD_BTN_HTML;
+      // 🌟 修正恢复文字
+      btn.innerHTML = prefix === 'xhs' ? '下载全部高清图片' : DOWNLOAD_BTN_HTML;
     } else if (task.progress === 100) {
       fill.style.width = '100%';
       lbl.textContent = task.text;
@@ -521,7 +531,8 @@
       setTimeout(() => {
         btn.disabled = false;
         btn.style.background = '';
-        btn.innerHTML = prefix === 'xhs' ? '下载视频 / 图片' : DOWNLOAD_BTN_HTML;
+        // 🌟 修正恢复文字
+        btn.innerHTML = prefix === 'xhs' ? '下载全部高清图片' : DOWNLOAD_BTN_HTML;
         wrap.classList.remove('show');
       }, 3000);
     } else {

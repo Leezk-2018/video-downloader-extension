@@ -106,6 +106,7 @@ function extractXhsMedia() {
       if (noteId) findNote(dataRoot, 0);
       const scope = noteData || null;
       if (scope) {
+        console.log('[XHS Debug] Raw Scope Data:', scope);
         if (scope.type === 'video') noteType = 'video';
         const seen = new WeakSet();
         function walk(obj, depth) {
@@ -133,15 +134,15 @@ function extractXhsMedia() {
     if (allVideoLinks.length > 0) noteType = 'video';
   } catch (e) {}
 
-  // 🌟 图片深度去重逻辑 🌟
+  // 🌟 图片深度去重逻辑 (恢复全量下载，仅 ID 去重) 🌟
   const finalImages = [];
   const imgIdSeen = new Set();
+  
   allImages.forEach(url => {
-    // 1. 去掉参数和样式后缀 (如 ?sign=... 或 !nd_prv...)
     const basePath = url.split('?')[0].split('!')[0].split('@')[0];
-    // 2. 取路径的最后一段作为唯一文件 ID (如 1040g...)
     const fileId = basePath.split('/').pop();
     
+    // 只要 ID 没出现过，就加入下载列表，不再剔除封面
     if (fileId && fileId.length > 10 && !imgIdSeen.has(fileId)) {
       imgIdSeen.add(fileId);
       finalImages.push(url.replace('http://', 'https://'));
