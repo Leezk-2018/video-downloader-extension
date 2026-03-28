@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "视频下载器 Pro",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "支持 YouTube、YouTube Shorts、小红书视频一键下载",
   "permissions": [
     "activeTab",

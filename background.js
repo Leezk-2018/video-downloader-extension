@@ -136,18 +136,23 @@ function extractXhsMedia() {
   // 🌟 图片深度智能去重 🌟
   const finalImages = [];
   const idToBestUrl = new Map(); 
+
   allImagesRaw.forEach(url => {
     const basePath = url.split('?')[0].split('!')[0].split('@')[0];
     const fileId = basePath.split('/').pop();
     if (!fileId || fileId.length < 10) return;
+
+    // 优先级判断：dft (资源) > 其他 > prv (预览)
     let priority = 1;
     if (url.includes('!nd_dft')) priority = 3;
     else if (url.includes('!nd_prv')) priority = 0; 
+
     const existing = idToBestUrl.get(fileId);
     if (!existing || priority > existing.priority) {
       idToBestUrl.set(fileId, { url: url.replace('http://', 'https://'), priority });
     }
   });
+
   idToBestUrl.forEach(val => finalImages.push(val.url));
 
   const uniqueVideos = [];
