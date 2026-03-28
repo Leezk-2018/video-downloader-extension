@@ -409,14 +409,14 @@
     
     const img = shadowRoot.getElementById('xhs-thumb');
     
-    // 🌟 重新获取媒体数据以拿到精准封面
+    // 🌟 重新获取媒体数据以拿到精准封面和类型
     chrome.runtime.sendMessage({ type: 'EXEC_XHS_EXTRACT' }).then(media => {
       let thumbUrl = '';
       
-      // 1. 优先使用 background 逻辑精准识别的封面 (sns-webpic)
+      // 1. 优先使用 background 逻辑精准识别的封面
       const detected = media?.cover;
       
-      // 2. 兜底策略：meta / poster / content
+      // 2. 兜底策略
       const ogImg = document.querySelector('meta[property="og:image"]')?.getAttribute('content');
       const videoPoster = document.querySelector('video')?.getAttribute('poster');
       const contentImg = Array.from(document.querySelectorAll('img')).find(i => {
@@ -426,8 +426,6 @@
 
       thumbUrl = detected || ogImg || videoPoster || contentImg || '';
       
-      console.log('[VD-PRO Debug] XHS Image Logic:', { detected, ogImg, videoPoster, contentImg, final: thumbUrl });
-
       if (thumbUrl) {
         img.style.display = 'block';
         img.src = thumbUrl;
@@ -435,12 +433,22 @@
         img.style.display = 'none';
       }
 
-      // 同时更新资源数量提示
+      // 🌟 核心：根据 noteType 切换按钮显示
+      const btnGroup = shadowRoot.getElementById('xhs-btn-group');
+      const singleBtn = shadowRoot.getElementById('xhs-download-btn');
       const hint = shadowRoot.getElementById('xhs-status-hint');
-      if (media && media.videos) {
+
+      if (media?.noteType === 'video') {
+        btnGroup.style.display = 'flex';
+        singleBtn.style.display = 'none';
         const vCount = media.videos.length;
         const wmCount = media.videos.filter(v => v.isWatermarked).length;
         hint.textContent = `已检测到 ${vCount} 个视频源 (包含 ${wmCount} 个带水印)`;
+      } else {
+        btnGroup.style.display = 'none';
+        singleBtn.style.display = 'block';
+        singleBtn.textContent = '下载全部图片';
+        hint.textContent = `已检测到 ${media?.images?.length || 0} 张高清图片`;
       }
     });
 

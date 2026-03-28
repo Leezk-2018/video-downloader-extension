@@ -66,7 +66,7 @@ async function handleXhsExtract(tabId) {
   try {
     const [res] = await chrome.scripting.executeScript({
       target: { tabId },
-      func: extractXhsMedia, // 复用原本逻辑
+      func: extractXhsMedia,
       world: 'MAIN',
     });
     return res?.result;
@@ -75,11 +75,12 @@ async function handleXhsExtract(tabId) {
   }
 }
 
-// 复用原本的小红书媒体提取逻辑 (由于 content.js 无法直接访问 MAIN world，所以放在 BG 中触发)
+// 复用原本的小红书媒体提取逻辑
 function extractXhsMedia() {
   const images = [];
   const allVideoLinks = [];
   let detectedCover = null;
+  let noteType = 'normal';
 
   function addImage(url) {
     if (!url || typeof url !== 'string') return;
@@ -105,6 +106,7 @@ function extractXhsMedia() {
       if (noteId) findNote(dataRoot, 0);
       const scope = noteData || null;
       if (scope) {
+        if (scope.type === 'video') noteType = 'video';
         const seen = new WeakSet();
         function walk(obj, depth) {
           if (!obj || depth > 15 || (typeof obj === 'object' && seen.has(obj))) return;
@@ -128,6 +130,7 @@ function extractXhsMedia() {
         walk(scope, 0);
       }
     }
+    if (allVideoLinks.length > 0) noteType = 'video';
     document.querySelectorAll('video').forEach(v => {
       if (v.src) allVideoLinks.push({ url: v.src, source: 'dom' });
       v.querySelectorAll('source').forEach(s => allVideoLinks.push({ url: s.src || s.getAttribute('src'), source: 'dom' }));
@@ -144,23 +147,17 @@ function extractXhsMedia() {
     const hash = hashMatch ? hashMatch[1] : base;
     const isWatermarked = base.includes('_259.mp4');
     
-    // 🌟 核心：计算精准权重 (增加特定后缀优先级) 🌟
     let weight = 0;
-    
-    // 1. 特定后缀优先级 (基于用户反馈的无水印高质量标识)
     if (base.includes('_108.mp4'))      weight += 5000;
     else if (base.includes('_115.mp4')) weight += 4000;
     else if (base.includes('_114.mp4')) weight += 3000;
     
-    // 2. 分辨率优先级
     if (base.includes('1080'))      weight += 2000;
     else if (base.includes('720'))  weight += 1000;
     
-    // 3. 来源字段优先级
     const sourceWeights = { 'master': 500, 'h265': 400, 'h264': 300, 'backup': 200, 'string': 100, 'dom': 50 };
     weight += (sourceWeights[item.source] || 0);
     
-    // 4. 纯净度补偿
     if (!hasParams) weight += 100;
     
     return { url, base, hash, hasParams, isWatermarked, weight };
@@ -174,10 +171,9 @@ function extractXhsMedia() {
     }
   }
 
-  console.log('[XHS Debug] 权重排序列表:', uniqueVideos.map(v => ({w: v.weight, wm: v.isWatermarked, u: v.url.substring(0, 50)})));
-
   return {
     videos: uniqueVideos, 
+    noteType: noteType,
     cover: detectedCover,
     images: [...new Set(images)].filter(u => u && u.startsWith('http'))
   };
