@@ -42,6 +42,12 @@
 
     let lastUrl = location.href;
     const observer = new MutationObserver(() => {
+      // 检查上下文是否依然有效
+      if (!chrome.runtime?.id) {
+        observer.disconnect();
+        return;
+      }
+
       // 1. 处理 URL 变化
       if (location.href !== lastUrl) {
         lastUrl = location.href;
@@ -59,13 +65,25 @@
   }
 
   async function checkAndRenderFloatBtn(isObserverCheck = false) {
-    const res = await chrome.storage.local.get(['showFloatBtn']);
-    const enabled = res.showFloatBtn !== false;
-    
-    if (enabled && isSupportedPage()) {
-      createFloatBtn();
-    } else {
-      if (!isObserverCheck) removeFloatBtn(); // 避免 Observer 循环触发
+    // 再次双重检查上下文有效性
+    if (!chrome.runtime?.id) return;
+
+    try {
+      const res = await chrome.storage.local.get(['showFloatBtn']);
+      const enabled = res.showFloatBtn !== false;
+      
+      if (enabled && isSupportedPage()) {
+        createFloatBtn();
+      } else {
+        if (!isObserverCheck) removeFloatBtn(); // 避免 Observer 循环触发
+      }
+    } catch (e) {
+      // 捕捉并忽略上下文失效导致的错误
+      if (e.message.includes('context invalidated')) {
+        console.log('[VD-PRO] Extension context invalidated, stopping checks.');
+      } else {
+        console.error('[VD-PRO] Error checking float btn status:', e);
+      }
     }
   }
 
@@ -223,10 +241,18 @@
           </section>
           <section id="state-youtube" class="state">
             <div class="media-card">
-              <div class="thumb-container"><img id="yt-thumb" src="" alt=""><div id="yt-type-tag" class="type-tag">YouTube</div></div>
-              <div class="media-info"><h2 id="yt-title" class="truncate"></h2><p id="yt-channel" class="sub-info"></p></div>
-              <div class="controls">
-                <label class="control-label">下载格式</label>
+              <div style="display: flex; padding: 12px; gap: 12px; align-items: center; border-bottom: 0.5px solid #E5E5EA; background: #F5F5F7;">
+                <div class="thumb-container" style="width: 80px; height: 45px; flex-shrink: 0; border-radius: 6px; overflow: hidden; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                  <img id="yt-thumb" src="" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                  <div id="yt-type-tag" class="type-tag" style="font-size: 7px; padding: 1px 4px; top: 2px; right: 2px;">YouTube</div>
+                </div>
+                <div class="media-info" style="flex: 1; min-width: 0;">
+                  <h2 id="yt-title" class="truncate" style="font-size: 12px; margin: 0; line-height: 1.2; color: #1D1D1F;"></h2>
+                  <p id="yt-channel" class="sub-info" style="font-size: 10px; margin-top: 2px; color: #86868B;"></p>
+                </div>
+              </div>
+              <div class="controls" style="padding: 12px;">
+                <label class="control-label" style="margin-top: 0;">下载格式</label>
                 <div class="segmented-control">
                   <button class="format-btn selected" data-format="mp4">视频 (MP4)</button>
                   <button class="format-btn" data-format="mp3">音频 (MP3)</button>
