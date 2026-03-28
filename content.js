@@ -226,7 +226,7 @@
         <header class="app-header">
           <div class="logo">
             <div class="logo-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
-            <h1>视频下载器 <span>Pro</span></h1>
+            <h1>PureDown <span>Pro</span></h1>
           </div>
         </header>
         <main class="app-content">

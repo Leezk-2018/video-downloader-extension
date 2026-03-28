@@ -1,4 +1,4 @@
-# 视频下载器 Pro
+# PureDown
 
 > 一款专为极客设计的 Chrome 浏览器插件。支持 YouTube、YouTube Shorts、小红书视频及图片一键下载。采用 Apple 设计语言，极致简洁，无水印，无广告。
 
