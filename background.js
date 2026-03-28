@@ -79,10 +79,17 @@ async function handleXhsExtract(tabId) {
 function extractXhsMedia() {
   const images = [];
   const allVideoLinks = [];
+  let detectedCover = null;
 
   function addImage(url) {
     if (!url || typeof url !== 'string') return;
     url = url.trim().replace(/\\u002F/g, '/');
+    
+    // 🌟 特征识别：识别小红书视频封面专项链接
+    if (url.includes('sns-webpic') || url.includes('!nd_prv')) {
+      detectedCover = url;
+    }
+
     const clean = url.split('!')[0].split('@')[0];
     if (images.includes(clean)) return;
     images.push(clean);
@@ -112,14 +119,16 @@ function extractXhsMedia() {
             if (obj.h265Url)   allVideoLinks.push(obj.h265Url);
             if (obj.h264Url)   allVideoLinks.push(obj.h264Url);
             if (Array.isArray(obj.backupUrls)) obj.backupUrls.forEach(u => allVideoLinks.push(u));
+            // 尝试直接捕获可能存在的 cover 字段
+            if (obj.cover && typeof obj.cover === 'string') addImage(obj.cover);
           }
           if (typeof obj === 'string') {
             if (/sns-video|\.mp4/.test(obj)) allVideoLinks.push(obj);
-            if (/sns-img|sns-webpcdn|ci\.xiaohongshu/.test(obj)) addImage(obj);
+            if (/sns-img|sns-webpcdn|ci\.xiaohongshu|sns-webpic/.test(obj)) addImage(obj);
             return;
           }
           if (Array.isArray(obj)) { obj.forEach(i => walk(i, depth + 1)); return; }
-          ['imageScene', 'urlPre', 'urlDefault', 'infoList'].forEach(k => { if (obj[k]) walk(obj[k], depth + 1); });
+          ['imageScene', 'urlPre', 'urlDefault', 'infoList', 'imageList', 'cover'].forEach(k => { if (obj[k]) walk(obj[k], depth + 1); });
           Object.values(obj).forEach(v => { if (v) walk(v, depth + 1); });
         }
         walk(scope, 0);
@@ -169,10 +178,9 @@ function extractXhsMedia() {
     }
   }
 
-  console.log('[XHS Debug] 智能排序后的所有源:', uniqueVideos);
-
   return {
     videos: uniqueVideos, 
+    cover: detectedCover, // 🌟 返回精准提取的封面
     images: [...new Set(images)].filter(u => u && u.startsWith('http'))
   };
 }

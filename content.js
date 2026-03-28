@@ -241,14 +241,15 @@
           </section>
           <section id="state-youtube" class="state">
             <div class="media-card">
-              <div style="display: flex; padding: 12px; gap: 12px; align-items: center; border-bottom: 0.5px solid #E5E5EA; background: #F5F5F7;">
-                <div class="thumb-container" style="width: 80px; height: 45px; flex-shrink: 0; border-radius: 6px; overflow: hidden; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+              <!-- 锁定水平布局：80px图 + 220px文 -->
+              <div style="display: flex; padding: 10px; gap: 10px; align-items: center; border-bottom: 0.5px solid #E5E5EA; background: #F5F5F7; width: 360px; box-sizing: border-box;">
+                <div style="width: 80px; height: 45px; flex-shrink: 0; border-radius: 6px; overflow: hidden; position: relative; background: #000;">
                   <img id="yt-thumb" src="" alt="" style="width: 100%; height: 100%; object-fit: cover;">
-                  <div id="yt-type-tag" class="type-tag" style="font-size: 7px; padding: 1px 4px; top: 2px; right: 2px;">YouTube</div>
+                  <div id="yt-type-tag" class="type-tag" style="font-size: 7px; padding: 1px 4px; top: 2px; right: 2px; background: rgba(255,255,255,0.9); color: #000; position: absolute; border-radius: 3px; font-weight: 800;">YT</div>
                 </div>
-                <div class="media-info" style="flex: 1; min-width: 0;">
-                  <h2 id="yt-title" class="truncate" style="font-size: 12px; margin: 0; line-height: 1.2; color: #1D1D1F;"></h2>
-                  <p id="yt-channel" class="sub-info" style="font-size: 10px; margin-top: 2px; color: #86868B;"></p>
+                <div style="width: 240px; min-width: 0;">
+                  <h2 id="yt-title" style="font-size: 12px; margin: 0; line-height: 1.2; color: #1D1D1F; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600;"></h2>
+                  <p id="yt-channel" style="font-size: 10px; margin: 2px 0 0; color: #86868B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></p>
                 </div>
               </div>
               <div class="controls" style="padding: 12px;">
@@ -272,7 +273,16 @@
           </section>
           <section id="state-xhs" class="state">
             <div class="media-card">
-              <div class="xhs-preview"><img id="xhs-thumb" src="" alt=""><div class="xhs-overlay"><h2 id="xhs-title" class="truncate"></h2><p id="xhs-author" class="sub-info"></p></div></div>
+              <div style="display: flex; padding: 12px; gap: 12px; align-items: center; border-bottom: 0.5px solid #E5E5EA; background: #F5F5F7;">
+                <div class="thumb-container" style="width: 80px; height: 45px; flex-shrink: 0; border-radius: 6px; overflow: hidden; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                  <img id="xhs-thumb" src="" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                  <div class="type-tag" style="font-size: 7px; padding: 1px 4px; top: 2px; right: 2px; color: #ff2442;">Red</div>
+                </div>
+                <div class="media-info" style="flex: 1; min-width: 0;">
+                  <h2 id="xhs-title" class="truncate" style="font-size: 12px; margin: 0; line-height: 1.2; color: #1D1D1F;"></h2>
+                  <p id="xhs-author" class="sub-info" style="font-size: 10px; margin-top: 2px; color: #86868B;"></p>
+                </div>
+              </div>
               <div class="controls" style="padding: 12px;">
                 <p id="xhs-status-hint" class="hint-text" style="margin-bottom: 12px;">正在检测媒体资源...</p>
                 <div id="xhs-progress-wrap" class="progress-container"><div class="progress-bar"><div id="xhs-progress-fill" class="progress-fill"></div></div><p id="xhs-progress-label" class="progress-text">准备就绪</p></div>
@@ -341,13 +351,31 @@
   async function initYouTubeUI() {
     const videoIdMatch = window.location.href.match(/[?&]v=([a-zA-Z0-9_-]{11})|\/shorts\/([a-zA-Z0-9_-]{11})/);
     const id = videoIdMatch?.[1] || videoIdMatch?.[2];
-    if (!id) return;
+    
+    console.log('[VD-PRO Debug] YT Init - ID:', id);
+    if (!id) {
+      console.error('[VD-PRO Debug] YT ID extraction failed');
+      return;
+    }
+
     const img = shadowRoot.getElementById('yt-thumb');
-    img.src = `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
-    img.onerror = () => { img.src = `https://img.youtube.com/vi/${id}/hqdefault.jpg`; };
-    shadowRoot.getElementById('yt-title').textContent = document.title.replace(' - YouTube', '');
-    shadowRoot.getElementById('yt-channel').textContent = document.querySelector('#channel-name a')?.textContent || '';
-    shadowRoot.getElementById('yt-type-tag').textContent = window.location.href.includes('/shorts/') ? 'Shorts' : 'YouTube';
+    const thumbUrl = `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
+    console.log('[VD-PRO Debug] YT Thumb URL:', thumbUrl);
+    
+    img.src = thumbUrl;
+    img.onload = () => console.log('[VD-PRO Debug] YT Thumb loaded');
+    img.onerror = () => { 
+      console.warn('[VD-PRO Debug] YT MaxRes failed, using HQ');
+      img.src = `https://img.youtube.com/vi/${id}/hqdefault.jpg`; 
+    };
+
+    const title = document.title.replace(' - YouTube', '');
+    const channel = document.querySelector('#channel-name a')?.textContent || '';
+    console.log('[VD-PRO Debug] YT Metadata:', { title, channel });
+
+    shadowRoot.getElementById('yt-title').textContent = title;
+    shadowRoot.getElementById('yt-channel').textContent = channel;
+    shadowRoot.getElementById('yt-type-tag').textContent = window.location.href.includes('/shorts/') ? 'Shorts' : 'YT';
     shadowRoot.getElementById('state-youtube').classList.add('active');
   }
 
@@ -374,14 +402,50 @@
   }
 
   async function initXhsUI() {
-    shadowRoot.getElementById('xhs-title').textContent = document.title.replace(/ [-|] 小红书$/, '');
-    shadowRoot.getElementById('xhs-author').textContent = document.querySelector('.username')?.textContent || '';
-    shadowRoot.getElementById('xhs-thumb').src = document.querySelector('meta[property="og:image"]')?.content || '';
+    const title = document.title.replace(/ [-|] 小红书$/, '');
+    const author = document.querySelector('.username')?.textContent || 
+                   document.querySelector('.author-name')?.textContent || 
+                   document.querySelector('.name')?.textContent || '';
     
-    // 动态调整按钮显示：如果是图片笔记，只显示一个下载图片按钮
-    const isVideo = document.querySelector('video') || window.location.href.includes('/explore/'); 
-    // 这里的判断可以优化，但在 init 时我们可以先根据页面特征预设
+    const img = shadowRoot.getElementById('xhs-thumb');
     
+    // 🌟 重新获取媒体数据以拿到精准封面
+    chrome.runtime.sendMessage({ type: 'EXEC_XHS_EXTRACT' }).then(media => {
+      let thumbUrl = '';
+      
+      // 1. 优先使用 background 逻辑精准识别的封面 (sns-webpic)
+      const detected = media?.cover;
+      
+      // 2. 兜底策略：meta / poster / content
+      const ogImg = document.querySelector('meta[property="og:image"]')?.getAttribute('content');
+      const videoPoster = document.querySelector('video')?.getAttribute('poster');
+      const contentImg = Array.from(document.querySelectorAll('img')).find(i => {
+        const s = i.src || '';
+        return s.startsWith('http') && !/avatar|profile|user/i.test(s) && i.offsetWidth > 100;
+      })?.src;
+
+      thumbUrl = detected || ogImg || videoPoster || contentImg || '';
+      
+      console.log('[VD-PRO Debug] XHS Image Logic:', { detected, ogImg, videoPoster, contentImg, final: thumbUrl });
+
+      if (thumbUrl) {
+        img.style.display = 'block';
+        img.src = thumbUrl;
+      } else {
+        img.style.display = 'none';
+      }
+
+      // 同时更新资源数量提示
+      const hint = shadowRoot.getElementById('xhs-status-hint');
+      if (media && media.videos) {
+        const vCount = media.videos.length;
+        const wmCount = media.videos.filter(v => v.isWatermarked).length;
+        hint.textContent = `已检测到 ${vCount} 个视频源 (包含 ${wmCount} 个带水印)`;
+      }
+    });
+
+    shadowRoot.getElementById('xhs-title').textContent = title;
+    shadowRoot.getElementById('xhs-author').textContent = author ? `@${author.trim()}` : '';
     shadowRoot.getElementById('state-xhs').classList.add('active');
   }
 
