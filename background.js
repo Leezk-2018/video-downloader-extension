@@ -15,6 +15,25 @@ let currentTask = {
 // ── 工具函数 ──────────────────────────────────────────────────────
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
+function showNotification(title, message) {
+  chrome.notifications.create({
+    type: 'basic',
+    iconUrl: 'icons/icon128.png',
+    title: title,
+    message: message,
+    priority: 2
+  });
+}
+
+function triggerDownload(url) {
+  console.log('[BG] triggerDownload:', url);
+  chrome.downloads.download({ url }, id => {
+    if (chrome.runtime.lastError) {
+      console.error('[BG] 下载错误:', chrome.runtime.lastError.message);
+    }
+  });
+}
+
 function updateTask(data) {
   currentTask = { ...currentTask, ...data };
   // 向所有打开的 popup 和当前激活的 tab 发送状态更新
@@ -148,7 +167,7 @@ async function handleYouTubeDownload(videoId, formatCode) {
     let dlUrl = null;
 
     for (let i = 0; i < 300; i++) {
-      await sleep(2000);
+      await sleep(3000);
       let pd;
       try {
         pd = await (await fetch(pollUrl)).json();

@@ -2,95 +2,192 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>设置 - 视频下载器 Pro</title>
+  <title>视频下载器 Pro - 设置</title>
   <style>
     :root {
-      --primary: #6366f1;
-      --bg: #0f172a;
-      --text: #f8fafc;
+      --primary: #0066FF;
+      --bg: #FFFFFF;
+      --text-main: #1D1D1F;
+      --text-sub: #86868B;
+      --border: #E5E5EA;
+      --card-bg: #F5F5F7;
     }
+    
     body {
-      width: 220px;
+      width: 240px;
+      margin: 0;
       padding: 16px;
       background: var(--bg);
-      color: var(--text);
-      font-family: system-ui, -apple-system, sans-serif;
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      -webkit-font-smoothing: antialiased;
     }
+
+    /* Header */
     .header {
       display: flex;
       align-items: center;
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
-    .header h2 { font-size: 15px; margin: 0; font-weight: 700; }
-    .header svg { color: var(--primary); }
     
-    .setting-item {
+    .logo-icon {
+      width: 24px;
+      height: 24px;
+      background: var(--primary);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    
+    .header h2 {
+      font-size: 14px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.2px;
+    }
+
+    /* 状态感应区 */
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 12px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      margin-bottom: 12px;
+      border: 0.5px solid var(--border);
+    }
+    
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #AEAEB2;
+    }
+    
+    .status-dot.active { background: #34C759; }
+    
+    .status-text {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-sub);
+    }
+
+    /* 设置项卡片 */
+    .setting-card {
+      background: var(--bg);
+      border: 0.5px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(255,255,255,0.08);
-      padding: 14px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
     }
-    .setting-label { font-size: 13px; font-weight: 600; }
+    
+    .setting-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    
+    .setting-label {
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .setting-desc {
+      font-size: 10px;
+      color: var(--text-sub);
+    }
 
-    /* Switch Style */
+    /* iOS Toggle Switch */
     .switch {
       position: relative;
       display: inline-block;
-      width: 38px;
-      height: 22px;
+      width: 36px;
+      height: 20px;
     }
+    
     .switch input { opacity: 0; width: 0; height: 0; }
+    
     .slider {
       position: absolute;
       cursor: pointer;
       top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #475569;
-      transition: .3s;
-      border-radius: 22px;
+      background-color: #E5E5EA;
+      transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 20px;
     }
+    
     .slider:before {
       position: absolute;
       content: "";
       height: 16px; width: 16px;
-      left: 3px; bottom: 3px;
+      left: 2px; bottom: 2px;
       background-color: white;
-      transition: .3s;
+      transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
       border-radius: 50%;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    input:checked + .slider { background-color: var(--primary); }
-    input:checked + .slider:before { transform: translateX(16px); }
     
+    input:checked + .slider { background-color: #34C759; }
+    input:checked + .slider:before { transform: translateX(16px); }
+
+    /* Footer Links */
     .footer {
       margin-top: 16px;
-      font-size: 11px;
-      color: #94a3b8;
-      text-align: center;
-      line-height: 1.4;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
     }
+    
+    .footer-link {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--primary);
+      text-decoration: none;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    }
+    
+    .footer-link:hover { opacity: 1; }
   </style>
 </head>
 <body>
   <div class="header">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-    </svg>
-    <h2>视频下载器 <span>Pro</span></h2>
+    <div class="logo-icon">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+    </div>
+    <h2>设置中心</h2>
   </div>
 
-  <div class="setting-item">
-    <span class="setting-label">显示悬浮按钮</span>
+  <div class="status-badge" id="page-status">
+    <div class="status-dot" id="status-dot"></div>
+    <span class="status-text" id="status-text">正在检测页面...</span>
+  </div>
+
+  <div class="setting-card">
+    <div class="setting-info">
+      <span class="setting-label">悬浮下载球</span>
+      <span class="setting-desc">开启后显示右下角按钮</span>
+    </div>
     <label class="switch">
       <input type="checkbox" id="toggle-btn">
       <span class="slider"></span>
     </label>
   </div>
 
-  <div class="footer">开启后在 YouTube 或小红书详情页<br>右下角显示下载按钮</div>
+  <div class="footer">
+    <a href="#" class="footer-link">使用帮助</a>
+    <span style="color:#E5E5EA; font-size:10px">|</span>
+    <a href="https://github.com/lee/video-downloader-extension" target="_blank" class="footer-link">GitHub</a>
+  </div>
 
   <script src="popup.js"></script>
 </body>

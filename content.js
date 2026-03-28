@@ -70,10 +70,8 @@
   }
 
   function createFloatBtn() {
-    // 如果已经存在且挂载在 documentElement 上，则不重复创建
     if (floatBtn && document.documentElement.contains(floatBtn)) return;
     
-    // 如果按钮存在但被网页移除了（游离状态），重新挂载
     if (floatBtn) {
       document.documentElement.appendChild(floatBtn);
       return;
@@ -86,22 +84,75 @@
     const s = floatBtn.style;
     s.setProperty('position', 'fixed', 'important');
     s.setProperty('right', '24px', 'important');
-    s.setProperty('bottom', '80px', 'important');
+    
+    // 从存储中恢复位置，默认为 80px
+    chrome.storage.local.get(['floatBtnBottom'], (res) => {
+      s.setProperty('bottom', (res.floatBtnBottom || 80) + 'px', 'important');
+    });
+
     s.setProperty('width', '52px', 'important');
     s.setProperty('height', '52px', 'important');
     s.setProperty('background', 'linear-gradient(135deg, #0066FF, #0052CC)', 'important');
     s.setProperty('color', 'white', 'important');
     s.setProperty('border-radius', '50%', 'important');
-    s.setProperty('cursor', 'pointer', 'important');
+    s.setProperty('cursor', 'grab', 'important');
     s.setProperty('display', 'flex', 'important');
     s.setProperty('align-items', 'center', 'important');
     s.setProperty('justify-content', 'center', 'important');
     s.setProperty('box-shadow', '0 10px 25px rgba(0, 102, 255, 0.3)', 'important');
     s.setProperty('z-index', '2147483647', 'important');
-    s.setProperty('transition', 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)', 'important');
+    s.setProperty('transition', 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)', 'important');
     s.setProperty('border', '1px solid rgba(255,255,255,0.4)', 'important');
+    s.setProperty('user-select', 'none', 'important');
 
-    floatBtn.onclick = (e) => { e.stopPropagation(); togglePanel(); };
+    // ── 拖拽逻辑实现 ──────────────────────────────────────────────
+    let isDragging = false;
+    let startY = 0;
+    let startBottom = 0;
+    let hasMoved = false;
+
+    floatBtn.onmousedown = (e) => {
+      isDragging = true;
+      hasMoved = false;
+      startY = e.clientY;
+      // 确保获取有效的数值，否则使用默认值 80
+      startBottom = parseInt(floatBtn.style.bottom) || 80;
+      floatBtn.style.cursor = 'grabbing';
+      floatBtn.style.transition = 'none'; // 拖拽时禁用平滑过渡
+      e.preventDefault();
+    };
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      
+      const deltaY = startY - e.clientY;
+      if (Math.abs(deltaY) > 5) hasMoved = true;
+
+      let newBottom = startBottom + deltaY;
+      
+      // 边界限制：离底 20px，离顶 20px
+      const maxBottom = window.innerHeight - 70;
+      newBottom = Math.max(20, Math.min(newBottom, maxBottom));
+      
+      floatBtn.style.setProperty('bottom', newBottom + 'px', 'important');
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      floatBtn.style.cursor = 'grab';
+      floatBtn.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), bottom 0.3s ease';
+      
+      // 保存位置
+      chrome.storage.local.set({ floatBtnBottom: parseInt(floatBtn.style.bottom) });
+    });
+
+    floatBtn.onclick = (e) => {
+      if (hasMoved) return; // 如果发生了明显位移，不触发点击
+      e.stopPropagation();
+      togglePanel();
+    };
+
     document.documentElement.appendChild(floatBtn);
   }
 
@@ -161,7 +212,15 @@
           </div>
         </header>
         <main class="app-content">
-          <section id="state-loading" class="state active"><div class="loader-wrap"><div class="loader"></div><p>正在分析页面...</p></div></section>
+          <section id="state-loading" class="state active">
+            <div class="media-card" style="box-shadow:none; border-color:#F2F2F7">
+              <div class="skeleton skeleton-thumb"></div>
+              <div class="skeleton skeleton-title"></div>
+              <div class="skeleton skeleton-text"></div>
+              <div class="skeleton skeleton-btn"></div>
+            </div>
+            <p style="text-align:center; font-size:11px; color:#AEAEB2; margin-top:12px; font-weight:600">正在分析页面数据...</p>
+          </section>
           <section id="state-youtube" class="state">
             <div class="media-card">
               <div class="thumb-container"><img id="yt-thumb" src="" alt=""><div id="yt-type-tag" class="type-tag">YouTube</div></div>
@@ -277,8 +336,10 @@
     wrap.classList.add('show');
     try {
       const media = await chrome.runtime.sendMessage({ type: 'EXEC_XHS_EXTRACT' });
-      if (!media?.videos?.length && !media?.images?.length) throw new Error('未提取到内容');
-      chrome.runtime.sendMessage({ type: 'START_XHS_DOWNLOAD', urls: media.videos?.length ? media.videos : media.images, type_label: media.videos?.length ? '视频' : '图片' });
+      if (!media || (!media.videos?.length && !media.images?.length)) throw new Error('未提取到内容');
+      const urls = media.videos?.length ? media.videos : media.images;
+      const typeLabel = media.videos?.length ? '视频' : '图片';
+      chrome.runtime.sendMessage({ type: 'START_XHS_DOWNLOAD', urls, type_label: typeLabel });
     } catch (e) {
       btn.disabled = false;
       btn.innerHTML = '下载视频 / 图片';
@@ -295,23 +356,35 @@
     const lbl = shadowRoot.getElementById(`${prefix}-progress-label`);
     if (!btn || !wrap) return;
 
+    // 悬浮球反馈
+    if (task.active) {
+      floatBtn.classList.add('pulse-active');
+    } else {
+      floatBtn.classList.remove('pulse-active');
+    }
+
     if (task.error) {
       shadowRoot.getElementById(`${prefix}-error-msg`).textContent = '❌ ' + task.error;
       shadowRoot.getElementById(`${prefix}-error-msg`).classList.add('show');
       btn.disabled = false;
+      btn.classList.remove('loading');
       btn.innerHTML = prefix === 'xhs' ? '下载视频 / 图片' : DOWNLOAD_BTN_HTML;
     } else if (task.progress === 100) {
       fill.style.width = '100%';
       lbl.textContent = task.text;
+      btn.classList.remove('loading');
+      btn.style.background = '#34C759'; 
       btn.innerHTML = '✅ 下载已开始';
       setTimeout(() => {
         btn.disabled = false;
+        btn.style.background = '';
         btn.innerHTML = prefix === 'xhs' ? '下载视频 / 图片' : DOWNLOAD_BTN_HTML;
         wrap.classList.remove('show');
       }, 3000);
     } else {
       btn.disabled = true;
-      btn.innerHTML = `<div class="loader" style="width:14px;height:14px;margin:0;border-width:2px"></div> 处理中...`;
+      btn.classList.add('loading');
+      btn.innerHTML = `<div class="loader" style="width:14px;height:14px;margin:0;border-width:2px;display:inline-block;vertical-align:middle;margin-right:8px"></div> ${task.progress}% 处理中...`;
       wrap.classList.add('show');
       fill.style.width = task.progress + '%';
       lbl.textContent = task.text;
