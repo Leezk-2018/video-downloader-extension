@@ -330,18 +330,9 @@
     if (isYT) {
       initYouTubeUI();
     } else if (isXHS) {
+      // 🌟 统一提取与展示逻辑，防止数据竞争
+      shadowRoot.getElementById('state-xhs').classList.add('active');
       initXhsUI();
-      // 动态获取数量并更新提示
-      chrome.runtime.sendMessage({ type: 'EXEC_XHS_EXTRACT' }).then(media => {
-        const hint = shadowRoot.getElementById('xhs-status-hint');
-        if (media && media.videos) {
-          const vCount = media.videos.length;
-          const wmCount = media.videos.filter(v => v.isWatermarked).length;
-          hint.textContent = `已检测到 ${vCount} 个视频源 (包含 ${wmCount} 个带水印)`;
-        } else {
-          hint.textContent = '未检测到视频资源';
-        }
-      });
     } else {
       shadowRoot.getElementById('state-loading').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>请在视频或笔记详情页使用</p></div>`;
       shadowRoot.getElementById('state-loading').classList.add('active');
@@ -448,7 +439,7 @@
         btnGroup.style.display = 'none';
         singleBtn.style.display = 'block';
         singleBtn.textContent = '下载全部图片';
-        hint.textContent = `已检测到 ${media?.images?.length || 0} 张高清图片`;
+        hint.textContent = `已检测到 ${media?.images?.length || 0} 张笔记图片`;
       }
     });
 
