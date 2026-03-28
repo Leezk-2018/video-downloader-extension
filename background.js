@@ -79,16 +79,16 @@ async function handleXhsExtract(tabId) {
 
 // 复用原本的小红书媒体提取逻辑
 function extractXhsMedia() {
-  const allImages = [];
+  const allImagesRaw = [];
   const allVideoLinks = [];
   let detectedCover = null;
   let noteType = 'normal';
 
   function addImage(url) {
     if (!url || typeof url !== 'string') return;
-    url = url.trim().replace(/\\u002F/g, '/');
-    if (url.includes('sns-webpic') || url.includes('!nd_prv')) detectedCover = url;
-    allImages.push(url);
+    const cleanUrl = url.trim().replace(/\\u002F/g, '/');
+    if (cleanUrl.includes('!nd_prv')) detectedCover = cleanUrl;
+    allImagesRaw.push(cleanUrl);
   }
 
   try {
@@ -106,7 +106,6 @@ function extractXhsMedia() {
       if (noteId) findNote(dataRoot, 0);
       const scope = noteData || null;
       if (scope) {
-        console.log('[XHS Debug] Raw Scope Data:', scope);
         if (scope.type === 'video') noteType = 'video';
         const seen = new WeakSet();
         function walk(obj, depth) {
@@ -125,7 +124,7 @@ function extractXhsMedia() {
             return;
           }
           if (Array.isArray(obj)) { obj.forEach(i => walk(i, depth + 1)); return; }
-          ['imageScene', 'urlPre', 'urlDefault', 'infoList', 'imageList', 'cover'].forEach(k => { if (obj[k]) walk(obj[k], depth + 1); });
+          ['imageScene', 'urlPre', 'urlDefault', 'infoList', 'imageList', 'imagesList', 'cover'].forEach(k => { if (obj[k]) walk(obj[k], depth + 1); });
           Object.values(obj).forEach(v => { if (v) walk(v, depth + 1); });
         }
         walk(scope, 0);
@@ -134,20 +133,22 @@ function extractXhsMedia() {
     if (allVideoLinks.length > 0) noteType = 'video';
   } catch (e) {}
 
-  // 🌟 图片深度去重逻辑 (恢复全量下载，仅 ID 去重) 🌟
+  // 🌟 图片深度智能去重 🌟
   const finalImages = [];
-  const imgIdSeen = new Set();
-  
-  allImages.forEach(url => {
+  const idToBestUrl = new Map(); 
+  allImagesRaw.forEach(url => {
     const basePath = url.split('?')[0].split('!')[0].split('@')[0];
     const fileId = basePath.split('/').pop();
-    
-    // 只要 ID 没出现过，就加入下载列表，不再剔除封面
-    if (fileId && fileId.length > 10 && !imgIdSeen.has(fileId)) {
-      imgIdSeen.add(fileId);
-      finalImages.push(url.replace('http://', 'https://'));
+    if (!fileId || fileId.length < 10) return;
+    let priority = 1;
+    if (url.includes('!nd_dft')) priority = 3;
+    else if (url.includes('!nd_prv')) priority = 0; 
+    const existing = idToBestUrl.get(fileId);
+    if (!existing || priority > existing.priority) {
+      idToBestUrl.set(fileId, { url: url.replace('http://', 'https://'), priority });
     }
   });
+  idToBestUrl.forEach(val => finalImages.push(val.url));
 
   const uniqueVideos = [];
   const hashSeen = new Set();

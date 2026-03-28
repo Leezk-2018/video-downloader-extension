@@ -289,9 +289,9 @@
                 
                 <!-- 三连按钮组 -->
                 <div id="xhs-btn-group" style="display: flex; gap: 8px; margin-top: 12px;">
-                  <button id="xhs-hd-btn" class="main-btn" style="margin-top:0; flex:1; font-size:11px; padding:10px 0;">高清版</button>
-                  <button id="xhs-nowm-btn" class="main-btn" style="margin-top:0; flex:1; font-size:11px; padding:10px 0; background:#34C759; box-shadow: 0 4px 12px rgba(52, 199, 89, 0.2);">无水印版</button>
-                  <button id="xhs-all-btn" class="main-btn" style="margin-top:0; flex:1; font-size:11px; padding:10px 0; background:#8E8E93; box-shadow: 0 4px 12px rgba(142, 142, 147, 0.2);">全部</button>
+                  <button id="xhs-hd-btn" class="main-btn" style="margin-top:0; flex:1; font-size:10px; padding:10px 0;">高清版视频</button>
+                  <button id="xhs-nowm-btn" class="main-btn" style="margin-top:0; flex:1; font-size:10px; padding:10px 0; background:#34C759; box-shadow: 0 4px 12px rgba(52, 199, 89, 0.2);">无水印视频</button>
+                  <button id="xhs-all-btn" class="main-btn" style="margin-top:0; flex:1; font-size:10px; padding:10px 0; background:#8E8E93; box-shadow: 0 4px 12px rgba(142, 142, 147, 0.2);">全部视频</button>
                 </div>
                 <button id="xhs-download-btn" class="main-btn xhs-btn" style="display:none">下载图片</button>
                 <p id="xhs-error-msg" class="error-text"></p>
