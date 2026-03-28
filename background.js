@@ -84,12 +84,7 @@ function extractXhsMedia() {
   function addImage(url) {
     if (!url || typeof url !== 'string') return;
     url = url.trim().replace(/\\u002F/g, '/');
-    
-    // 🌟 特征识别：识别小红书视频封面专项链接
-    if (url.includes('sns-webpic') || url.includes('!nd_prv')) {
-      detectedCover = url;
-    }
-
+    if (url.includes('sns-webpic') || url.includes('!nd_prv')) detectedCover = url;
     const clean = url.split('!')[0].split('@')[0];
     if (images.includes(clean)) return;
     images.push(clean);
@@ -115,15 +110,14 @@ function extractXhsMedia() {
           if (!obj || depth > 15 || (typeof obj === 'object' && seen.has(obj))) return;
           if (typeof obj === 'object') {
             seen.add(obj);
-            if (obj.masterUrl) allVideoLinks.push(obj.masterUrl);
-            if (obj.h265Url)   allVideoLinks.push(obj.h265Url);
-            if (obj.h264Url)   allVideoLinks.push(obj.h264Url);
-            if (Array.isArray(obj.backupUrls)) obj.backupUrls.forEach(u => allVideoLinks.push(u));
-            // 尝试直接捕获可能存在的 cover 字段
+            if (obj.masterUrl) allVideoLinks.push({ url: obj.masterUrl, source: 'master' });
+            if (obj.h265Url)   allVideoLinks.push({ url: obj.h265Url,   source: 'h265' });
+            if (obj.h264Url)   allVideoLinks.push({ url: obj.h264Url,   source: 'h264' });
+            if (Array.isArray(obj.backupUrls)) obj.backupUrls.forEach(u => allVideoLinks.push({ url: u, source: 'backup' }));
             if (obj.cover && typeof obj.cover === 'string') addImage(obj.cover);
           }
           if (typeof obj === 'string') {
-            if (/sns-video|\.mp4/.test(obj)) allVideoLinks.push(obj);
+            if (/sns-video|\.mp4/.test(obj)) allVideoLinks.push({ url: obj, source: 'string' });
             if (/sns-img|sns-webpcdn|ci\.xiaohongshu|sns-webpic/.test(obj)) addImage(obj);
             return;
           }
@@ -135,52 +129,56 @@ function extractXhsMedia() {
       }
     }
     document.querySelectorAll('video').forEach(v => {
-      if (v.src) allVideoLinks.push(v.src);
-      v.querySelectorAll('source').forEach(s => allVideoLinks.push(s.src || s.getAttribute('src')));
+      if (v.src) allVideoLinks.push({ url: v.src, source: 'dom' });
+      v.querySelectorAll('source').forEach(s => allVideoLinks.push({ url: s.src || s.getAttribute('src'), source: 'dom' }));
     });
   } catch (e) {}
 
-  // 🌟 核心逻辑：高级去重、权重排序与过滤 🌟
   const uniqueVideos = [];
   const hashSeen = new Set();
-
-  const cleanedList = allVideoLinks.map(raw => {
-    const url = raw.trim().replace(/\\u002F/g, '/');
+  const cleanedList = allVideoLinks.map(item => {
+    const url = item.url.trim().replace(/\\u002F/g, '/');
     const base = url.split('?')[0]; 
     const hasParams = url.includes('?');
     const hashMatch = base.match(/\/([a-z0-9]{30,})/i);
     const hash = hashMatch ? hashMatch[1] : base;
-    
-    // 识别 259 后缀（带水印）
     const isWatermarked = base.includes('_259.mp4');
     
-    // 计算权重：越高越清晰
+    // 🌟 核心：计算精准权重 (增加特定后缀优先级) 🌟
     let weight = 0;
-    if (base.includes('1080')) weight += 100;
-    if (base.includes('h265')) weight += 50;
-    if (base.includes('720'))  weight += 30;
-    if (!hasParams)            weight += 10; // 无参数通常更原始
+    
+    // 1. 特定后缀优先级 (基于用户反馈的无水印高质量标识)
+    if (base.includes('_108.mp4'))      weight += 5000;
+    else if (base.includes('_115.mp4')) weight += 4000;
+    else if (base.includes('_114.mp4')) weight += 3000;
+    
+    // 2. 分辨率优先级
+    if (base.includes('1080'))      weight += 2000;
+    else if (base.includes('720'))  weight += 1000;
+    
+    // 3. 来源字段优先级
+    const sourceWeights = { 'master': 500, 'h265': 400, 'h264': 300, 'backup': 200, 'string': 100, 'dom': 50 };
+    weight += (sourceWeights[item.source] || 0);
+    
+    // 4. 纯净度补偿
+    if (!hasParams) weight += 100;
     
     return { url, base, hash, hasParams, isWatermarked, weight };
   }).filter(item => item.base.startsWith('http'));
 
-  // 排序：权重越高越靠前，同权重下无参数优先
   cleanedList.sort((a, b) => b.weight - a.weight);
-
   for (const item of cleanedList) {
     if (!hashSeen.has(item.hash)) {
       hashSeen.add(item.hash);
-      uniqueVideos.push({
-        url: item.url,
-        isWatermarked: item.isWatermarked,
-        weight: item.weight
-      });
+      uniqueVideos.push({ url: item.url, isWatermarked: item.isWatermarked, weight: item.weight });
     }
   }
 
+  console.log('[XHS Debug] 权重排序列表:', uniqueVideos.map(v => ({w: v.weight, wm: v.isWatermarked, u: v.url.substring(0, 50)})));
+
   return {
     videos: uniqueVideos, 
-    cover: detectedCover, // 🌟 返回精准提取的封面
+    cover: detectedCover,
     images: [...new Set(images)].filter(u => u && u.startsWith('http'))
   };
 }
