@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "PureDown Pro",
   "version": "3.0.0",
-  "description": "支持 YouTube、YouTube Shorts、小红书视频一键下载",
+  "description": "支持 YouTube、YouTube Shorts、小红书、Bilibili 视频一键下载",
   "permissions": [
     "activeTab",
     "scripting",
