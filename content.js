@@ -20,7 +20,8 @@
     const url = window.location.href;
     const isYT = url.includes('youtube.com/watch') || url.includes('youtube.com/shorts/');
     const isXHS = url.includes('xiaohongshu.com/explore/');
-    return isYT || isXHS;
+    const isBili = url.includes('bilibili.com/video/');
+    return isYT || isXHS || isBili;
   }
 
   async function init() {
@@ -298,6 +299,25 @@
               </div>
             </div>
           </section>
+          <section id="state-bilibili" class="state">
+            <div class="media-card">
+              <div style="display: flex; padding: 12px; gap: 12px; align-items: center; border-bottom: 0.5px solid #E5E5EA; background: #F5F5F7;">
+                <div class="thumb-container" style="width: 80px; height: 45px; flex-shrink: 0; border-radius: 6px; overflow: hidden; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                  <img id="bili-thumb" src="" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                  <div class="type-tag" style="font-size: 7px; padding: 1px 4px; top: 2px; right: 2px; color: #fb7299; font-weight: bold; background: rgba(255,255,255,0.9); position: absolute; border-radius: 3px;">Bili</div>
+                </div>
+                <div class="media-info" style="flex: 1; min-width: 0;">
+                  <h2 id="bili-title" class="truncate" style="font-size: 12px; margin: 0; line-height: 1.2; color: #1D1D1F; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600;"></h2>
+                  <p id="bili-author" class="sub-info" style="font-size: 10px; margin-top: 2px; color: #86868B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></p>
+                </div>
+              </div>
+              <div class="controls" style="padding: 12px;">
+                <div id="bili-progress-wrap" class="progress-container" style="margin-bottom: 12px;"><div class="progress-bar"><div id="bili-progress-fill" class="progress-fill"></div></div><p id="bili-progress-label" class="progress-text">准备就绪</p></div>
+                <button id="bili-download-btn" class="main-btn" style="margin-top:0; width:100%; font-size:12px; padding:12px 0;">${DOWNLOAD_BTN_HTML} (合并版)</button>
+                <p id="bili-error-msg" class="error-text"></p>
+              </div>
+            </div>
+          </section>
         </main>
       </div>
     `;
@@ -312,6 +332,11 @@
     shadowRoot.getElementById('xhs-nowm-btn').onclick = () => startXhsDownload('nowm');
     shadowRoot.getElementById('xhs-all-btn').onclick = () => startXhsDownload('all');
     shadowRoot.getElementById('xhs-download-btn').onclick = () => startXhsDownload('images');
+    
+    // B站按钮绑定
+    if (shadowRoot.getElementById('bili-download-btn')) {
+      shadowRoot.getElementById('bili-download-btn').onclick = startBilibiliDownload;
+    }
   }
 
   function togglePanel() {
@@ -325,6 +350,7 @@
     const url = window.location.href;
     const isYT = url.includes('youtube.com/watch') || url.includes('youtube.com/shorts/');
     const isXHS = url.includes('xiaohongshu.com/explore/');
+    const isBili = url.includes('bilibili.com/video/');
     shadowRoot.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
     
     if (isYT) {
@@ -333,6 +359,9 @@
       // 🌟 统一提取与展示逻辑，防止数据竞争
       shadowRoot.getElementById('state-xhs').classList.add('active');
       initXhsUI();
+    } else if (isBili) {
+      shadowRoot.getElementById('state-bilibili').classList.add('active');
+      initBilibiliUI();
     } else {
       shadowRoot.getElementById('state-loading').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>请在视频或笔记详情页使用</p></div>`;
       shadowRoot.getElementById('state-loading').classList.add('active');
@@ -500,8 +529,101 @@
     }
   }
 
+  async function initBilibiliUI() {
+    const titleMatch = document.title.match(/(.*?)_哔哩哔哩_bilibili/);
+    const title = titleMatch ? titleMatch[1] : document.title;
+    
+    const authorEl = document.querySelector('.up-name') || document.querySelector('.up-info .name');
+    const author = authorEl ? authorEl.textContent.trim() : '';
+
+    const img = shadowRoot.getElementById('bili-thumb');
+    const ogImg = document.querySelector('meta[property="og:image"]')?.getAttribute('content');
+    const itemImg = document.querySelector('meta[itemprop="image"]')?.getAttribute('content');
+    const thumbUrl = ogImg || itemImg || '';
+
+    if (thumbUrl) {
+      img.style.display = 'block';
+      img.src = thumbUrl.startsWith('//') ? 'https:' + thumbUrl : thumbUrl;
+    } else {
+      img.style.display = 'none';
+    }
+
+    shadowRoot.getElementById('bili-title').textContent = title;
+    shadowRoot.getElementById('bili-author').textContent = author ? `@${author}` : '';
+  }
+
+  async function startBilibiliDownload() {
+    const errorEl = shadowRoot.getElementById('bili-error-msg');
+    const wrap = shadowRoot.getElementById('bili-progress-wrap');
+    errorEl.classList.remove('show');
+    wrap.classList.add('show');
+
+    try {
+      syncTaskUI({ active: true, platform: 'bilibili', progress: 10, text: '正在解析视频地址...', error: '' });
+      const mediaUrl = await chrome.runtime.sendMessage({ type: 'EXEC_BILI_EXTRACT' });
+      if (!mediaUrl) {
+        throw new Error('无法提取到合并版视频链接，可能是该视频强制使用 DASH 格式或需要登录');
+      }
+      
+      // 🌟 核心改进：直接在 B 站页面的上下文中通过 fetch 拉取数据流
+      const filename = `bilibili_${Date.now()}.mp4`;
+      syncTaskUI({ active: true, platform: 'bilibili', progress: 20, text: '正在建立下载连接...', error: '' });
+      
+      const response = await fetch(mediaUrl);
+      if (!response.ok) throw new Error(`下载请求失败: ${response.status}`);
+      
+      const contentLength = response.headers.get('content-length');
+      const total = contentLength ? parseInt(contentLength, 10) : 0;
+      let loaded = 0;
+      
+      const reader = response.body.getReader();
+      const chunks = [];
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        loaded += value.length;
+        
+        if (total > 0) {
+          const progress = Math.min(20 + Math.round((loaded / total) * 75), 99); // 20% 到 95%
+          const mbLoaded = (loaded / 1024 / 1024).toFixed(1);
+          const mbTotal = (total / 1024 / 1024).toFixed(1);
+          syncTaskUI({ active: true, platform: 'bilibili', progress, text: `下载中: ${mbLoaded}MB / ${mbTotal}MB`, error: '' });
+        } else {
+          const mbLoaded = (loaded / 1024 / 1024).toFixed(1);
+          syncTaskUI({ active: true, platform: 'bilibili', progress: 50, text: `下载中: ${mbLoaded}MB...`, error: '' });
+        }
+      }
+      
+      syncTaskUI({ active: true, platform: 'bilibili', progress: 98, text: '正在保存文件...', error: '' });
+      const blob = new Blob(chunks, { type: 'video/mp4' });
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+      }, 1000);
+      
+      syncTaskUI({ active: false, platform: 'bilibili', progress: 100, text: '✅ 下载完成', error: '' });
+    } catch (e) {
+      console.error('[PureDown Pro] Bilibili download error:', e);
+      syncTaskUI({ active: false, platform: 'bilibili', progress: 0, text: '', error: e.message });
+    }
+  }
+
   function syncTaskUI(task) {
-    const prefix = task.platform === 'youtube' ? 'yt' : 'xhs';
+    let prefix = 'xhs';
+    if (task.platform === 'youtube') prefix = 'yt';
+    else if (task.platform === 'bilibili') prefix = 'bili';
+    
     const btn = shadowRoot.getElementById(`${prefix}-download-btn`);
     const wrap = shadowRoot.getElementById(`${prefix}-progress-wrap`);
     const fill = shadowRoot.getElementById(`${prefix}-progress-fill`);
@@ -515,13 +637,14 @@
       floatBtn.classList.remove('pulse-active');
     }
 
+    const restoreHTML = prefix === 'xhs' ? '下载全部高清图片' : (prefix === 'bili' ? `${DOWNLOAD_BTN_HTML} (合并版)` : DOWNLOAD_BTN_HTML);
+
     if (task.error) {
       shadowRoot.getElementById(`${prefix}-error-msg`).textContent = '❌ ' + task.error;
       shadowRoot.getElementById(`${prefix}-error-msg`).classList.add('show');
       btn.disabled = false;
       btn.classList.remove('loading');
-      // 🌟 修正恢复文字
-      btn.innerHTML = prefix === 'xhs' ? '下载全部高清图片' : DOWNLOAD_BTN_HTML;
+      btn.innerHTML = restoreHTML;
     } else if (task.progress === 100) {
       fill.style.width = '100%';
       lbl.textContent = task.text;
@@ -531,8 +654,7 @@
       setTimeout(() => {
         btn.disabled = false;
         btn.style.background = '';
-        // 🌟 修正恢复文字
-        btn.innerHTML = prefix === 'xhs' ? '下载全部高清图片' : DOWNLOAD_BTN_HTML;
+        btn.innerHTML = restoreHTML;
         wrap.classList.remove('show');
       }, 3000);
     } else {

@@ -16,6 +16,10 @@
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://www.xiaohongshu.com/*",
+    "https://*.bilibili.com/*",
+    "https://*.bilivideo.com/*",
+    "https://*.bilivideo.cn/*",
+    "https://*.mountaintoys.cn/*",
     "https://loader.to/*",
     "https://p.savenow.to/*"
   ],
@@ -38,7 +42,8 @@
       "matches": [
         "https://www.youtube.com/watch*",
         "https://www.youtube.com/shorts/*",
-        "https://www.xiaohongshu.com/*"
+        "https://www.xiaohongshu.com/*",
+        "https://www.bilibili.com/video/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"]

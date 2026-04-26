@@ -60,6 +60,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message.type === 'EXEC_XHS_EXTRACT') {
     handleXhsExtract(sender.tab.id).then(sendResponse);
     return true; 
+  } else if (message.type === 'EXEC_BILI_EXTRACT') {
+    handleBiliExtract(sender.tab.id).then(sendResponse);
+    return true;
   }
   return true;
 });
@@ -250,5 +253,54 @@ async function handleXhsDownload(urls, typeLabel) {
     updateTask({ active: false });
   } catch (err) {
     updateTask({ active: false, error: err.message });
+  }
+}
+
+// ── Bilibili 下载核心逻辑 ──────────────────────────────────────────
+async function handleBiliExtract(tabId) {
+  try {
+    const [res] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: extractBiliMedia,
+      world: 'MAIN',
+    });
+    
+    const result = res?.result;
+    if (!result) return null;
+    if (result.url) return result.url;
+
+    // 🌟 核心改进：通过 API 换取合并流链接
+    if (result.bvid && result.cid) {
+      console.log('[BG] Fetching Bili PlayURL via API:', result.bvid, result.cid);
+      // fnval=1 强制要求非 DASH 的合并 MP4/FLV 流
+      const apiUrl = `https://api.bilibili.com/x/player/playurl?bvid=${result.bvid}&cid=${result.cid}&qn=64&fnval=1`;
+      const r = await fetch(apiUrl);
+      const data = await r.json();
+      
+      if (data.code === 0 && data.data?.durl?.[0]?.url) {
+        return data.data.durl[0].url;
+      } else {
+        console.error('[BG] Bili API failed or no durl:', data);
+      }
+    }
+    return null;
+  } catch (e) {
+    console.error('[BG] Bili Extract Error:', e);
+    return null;
+  }
+}
+
+function extractBiliMedia() {
+  try {
+    const playinfo = window.__playinfo__;
+    if (playinfo && playinfo.data && playinfo.data.durl && playinfo.data.durl.length > 0) {
+      return { url: playinfo.data.durl[0].url };
+    }
+    // 如果页面没给合并流，提取 ID 返回给后台去请求 API
+    const bvid = window.bvid || window.__INITIAL_STATE__?.bvid || location.pathname.match(/(BV[a-zA-Z0-9]+)/)?.[1];
+    const cid = window.cid || window.__INITIAL_STATE__?.videoData?.cid || window.__INITIAL_STATE__?.cid;
+    return { bvid, cid };
+  } catch(e) {
+    return null;
   }
 }
