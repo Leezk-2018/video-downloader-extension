@@ -21,7 +21,8 @@
     "https://*.bilivideo.cn/*",
     "https://*.mountaintoys.cn/*",
     "https://loader.to/*",
-    "https://p.savenow.to/*"
+    "https://p.savenow.to/*",
+    "https://www.douyin.com/*"
   ],
   "web_accessible_resources": [
     {
@@ -43,7 +44,8 @@
         "https://www.youtube.com/watch*",
         "https://www.youtube.com/shorts/*",
         "https://www.xiaohongshu.com/*",
-        "https://www.bilibili.com/video/*"
+        "https://www.bilibili.com/video/*",
+        "https://www.douyin.com/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"]
