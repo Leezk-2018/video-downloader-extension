@@ -63,6 +63,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message.type === 'EXEC_BILI_EXTRACT') {
     handleBiliExtract(sender.tab.id).then(sendResponse);
     return true;
+  } else if (message.type === 'EXEC_DOUYIN_EXTRACT') {
+    handleDouyinExtract(sender.tab.id).then(sendResponse);
+    return true;
   }
   return true;
 });
@@ -304,3 +307,55 @@ function extractBiliMedia() {
     return null;
   }
 }
+
+// ── Douyin 下载核心逻辑 ──────────────────────────────────────────
+async function handleDouyinExtract(tabId) {
+  try {
+    const [res] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: extractDouyinMedia,
+      world: 'MAIN',
+    });
+    return res?.result;
+  } catch (e) {
+    console.error('[BG] Douyin Extract Error:', e);
+    return null;
+  }
+}
+
+function extractDouyinMedia() {
+  try {
+    const renderData = document.getElementById('RENDER_DATA')?.textContent;
+    if (!renderData) return null;
+    
+    const data = JSON.parse(decodeURIComponent(renderData));
+    
+    // 递归搜索包含 playAddr 的对象
+    let videoData = null;
+    let title = document.title;
+    
+    function findVideo(obj) {
+      if (!obj || videoData) return;
+      if (typeof obj !== 'object') return;
+      
+      if (obj.playAddr && obj.cover) {
+        videoData = {
+          url: obj.playAddr.replace('playwm', 'play'), // 无水印
+          cover: obj.cover,
+          title: title
+        };
+        return;
+      }
+      
+      for (let k in obj) {
+        findVideo(obj[k]);
+      }
+    }
+    
+    findVideo(data);
+    return videoData;
+  } catch (e) {
+    return null;
+  }
+}
+
