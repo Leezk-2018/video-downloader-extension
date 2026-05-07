@@ -412,11 +412,50 @@
     const wrap = shadowRoot.getElementById('dy-progress-wrap');
     errorEl.classList.remove('show');
     wrap.classList.add('show');
+
     try {
-      chrome.runtime.sendMessage({ type: 'START_DOUYIN_DOWNLOAD' });
+      syncTaskUI({ active: true, platform: 'douyin', progress: 10, text: '正在解析无水印地址...', error: '' });
+      const media = await chrome.runtime.sendMessage({ type: 'EXEC_DOUYIN_EXTRACT' });
+      if (!media || !media.url) throw new Error('无法提取到视频地址');
+      
+      const filename = `douyin_${Date.now()}.mp4`;
+      syncTaskUI({ active: true, platform: 'douyin', progress: 20, text: '正在建立连接...', error: '' });
+      
+      const response = await fetch(media.url);
+      if (!response.ok) throw new Error(`请求失败: ${response.status}`);
+      
+      const contentLength = response.headers.get('content-length');
+      const total = contentLength ? parseInt(contentLength, 10) : 0;
+      let loaded = 0;
+      
+      const reader = response.body.getReader();
+      const chunks = [];
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        loaded += value.length;
+        
+        if (total > 0) {
+          const progress = Math.min(20 + Math.round((loaded / total) * 75), 99);
+          syncTaskUI({ active: true, platform: 'douyin', progress, text: `下载中: ${(loaded / 1024 / 1024).toFixed(1)}MB`, error: '' });
+        }
+      }
+      
+      syncTaskUI({ active: true, platform: 'douyin', progress: 98, text: '正在合并文件...', error: '' });
+      const blob = new Blob(chunks, { type: 'video/mp4' });
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(blobUrl);
+      
+      syncTaskUI({ active: false, platform: 'douyin', progress: 100, text: '✅ 下载完成', error: '' });
     } catch (e) {
-      errorEl.textContent = '❌ ' + e.message;
-      errorEl.classList.add('show');
+      syncTaskUI({ active: false, platform: 'douyin', progress: 0, text: '', error: e.message });
     }
   }
 
