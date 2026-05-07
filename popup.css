@@ -445,3 +445,12 @@ h1 span {
 }
 
 .app-footer p { font-size: 9px; font-weight: 700; color: #AEAEB2; text-transform: uppercase; letter-spacing: 1px; }
+
+/* Douyin Specific */
+#state-douyin .main-btn {
+  background: linear-gradient(135deg, #FE2C55, #25F4EE);
+  box-shadow: 0 4px 12px rgba(254, 44, 85, 0.2);
+}
+#state-douyin .type-tag {
+  color: #FE2C55 !important;
+}
