@@ -98,6 +98,12 @@ h1 span {
   to { opacity: 1; transform: translateY(0); }
 }
 
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Media Cards - 允许水平布局 */
 .media-card {
   background: var(--bg-card);

@@ -21,7 +21,8 @@
     const isYT = url.includes('youtube.com/watch') || url.includes('youtube.com/shorts/');
     const isXHS = url.includes('xiaohongshu.com/explore/');
     const isBili = url.includes('bilibili.com/video/');
-    return isYT || isXHS || isBili;
+    const isDouyin = url.includes('douyin.com/');
+    return isYT || isXHS || isBili || isDouyin;
   }
 
   async function init() {
@@ -318,6 +319,25 @@
               </div>
             </div>
           </section>
+          <section id="state-douyin" class="state">
+            <div class="media-card">
+              <div style="display: flex; padding: 12px; gap: 12px; align-items: center; border-bottom: 0.5px solid #E5E5EA; background: #F5F5F7;">
+                <div class="thumb-container" style="width: 80px; height: 45px; flex-shrink: 0; border-radius: 6px; overflow: hidden; position: relative; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                  <img id="dy-thumb" src="" alt="" style="width: 100%; height: 100%; object-fit: cover;">
+                  <div class="type-tag" style="font-size: 7px; padding: 1px 4px; top: 2px; right: 2px; color: #FE2C55; font-weight: bold; background: rgba(255,255,255,0.9); position: absolute; border-radius: 3px;">DY</div>
+                </div>
+                <div class="media-info" style="flex: 1; min-width: 0;">
+                  <h2 id="dy-title" class="truncate" style="font-size: 12px; margin: 0; line-height: 1.2; color: #1D1D1F; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600;"></h2>
+                  <p id="dy-author" class="sub-info" style="font-size: 10px; margin-top: 2px; color: #86868B;">@抖音视频</p>
+                </div>
+              </div>
+              <div class="controls" style="padding: 12px;">
+                <div id="dy-progress-wrap" class="progress-container" style="margin-bottom: 12px;"><div class="progress-bar"><div id="dy-progress-fill" class="progress-fill"></div></div><p id="dy-progress-label" class="progress-text">准备就绪</p></div>
+                <button id="dy-download-btn" class="main-btn" style="margin-top:0; width:100%; font-size:12px; padding:12px 0;">${DOWNLOAD_BTN_HTML} (无水印)</button>
+                <p id="dy-error-msg" class="error-text"></p>
+              </div>
+            </div>
+          </section>
         </main>
       </div>
     `;
@@ -337,6 +357,11 @@
     if (shadowRoot.getElementById('bili-download-btn')) {
       shadowRoot.getElementById('bili-download-btn').onclick = startBilibiliDownload;
     }
+
+    // 抖音按钮绑定
+    if (shadowRoot.getElementById('dy-download-btn')) {
+      shadowRoot.getElementById('dy-download-btn').onclick = startDouyinDownload;
+    }
   }
 
   function togglePanel() {
@@ -351,6 +376,7 @@
     const isYT = url.includes('youtube.com/watch') || url.includes('youtube.com/shorts/');
     const isXHS = url.includes('xiaohongshu.com/explore/');
     const isBili = url.includes('bilibili.com/video/');
+    const isDouyin = url.includes('douyin.com/');
     shadowRoot.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
     
     if (isYT) {
@@ -362,9 +388,35 @@
     } else if (isBili) {
       shadowRoot.getElementById('state-bilibili').classList.add('active');
       initBilibiliUI();
+    } else if (isDouyin) {
+      shadowRoot.getElementById('state-douyin').classList.add('active');
+      initDouyinUI();
     } else {
       shadowRoot.getElementById('state-loading').innerHTML = `<div class="empty-state"><div class="empty-icon">⚠️</div><p>请在视频或笔记详情页使用</p></div>`;
       shadowRoot.getElementById('state-loading').classList.add('active');
+    }
+  }
+
+  async function initDouyinUI() {
+    const media = await chrome.runtime.sendMessage({ type: 'EXEC_DOUYIN_EXTRACT' });
+    if (media) {
+      shadowRoot.getElementById('dy-title').textContent = media.title || document.title;
+      const img = shadowRoot.getElementById('dy-thumb');
+      img.src = media.cover || '';
+      img.style.display = media.cover ? 'block' : 'none';
+    }
+  }
+
+  async function startDouyinDownload() {
+    const errorEl = shadowRoot.getElementById('dy-error-msg');
+    const wrap = shadowRoot.getElementById('dy-progress-wrap');
+    errorEl.classList.remove('show');
+    wrap.classList.add('show');
+    try {
+      chrome.runtime.sendMessage({ type: 'START_DOUYIN_DOWNLOAD' });
+    } catch (e) {
+      errorEl.textContent = '❌ ' + e.message;
+      errorEl.classList.add('show');
     }
   }
 
@@ -623,6 +675,7 @@
     let prefix = 'xhs';
     if (task.platform === 'youtube') prefix = 'yt';
     else if (task.platform === 'bilibili') prefix = 'bili';
+    else if (task.platform === 'douyin') prefix = 'dy';
     
     const btn = shadowRoot.getElementById(`${prefix}-download-btn`);
     const wrap = shadowRoot.getElementById(`${prefix}-progress-wrap`);
@@ -637,7 +690,10 @@
       floatBtn.classList.remove('pulse-active');
     }
 
-    const restoreHTML = prefix === 'xhs' ? '下载全部高清图片' : (prefix === 'bili' ? `${DOWNLOAD_BTN_HTML} (合并版)` : DOWNLOAD_BTN_HTML);
+    let restoreHTML = DOWNLOAD_BTN_HTML;
+    if (prefix === 'xhs') restoreHTML = '下载全部高清图片';
+    else if (prefix === 'bili') restoreHTML = `${DOWNLOAD_BTN_HTML} (合并版)`;
+    else if (prefix === 'dy') restoreHTML = `${DOWNLOAD_BTN_HTML} (无水印)`;
 
     if (task.error) {
       shadowRoot.getElementById(`${prefix}-error-msg`).textContent = '❌ ' + task.error;
