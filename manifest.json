@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "PureDown Pro",
   "version": "3.0.0",
-  "description": "支持 YouTube、YouTube Shorts、小红书、Bilibili 视频一键下载",
+  "description": "全能视频下载助手：支持 YouTube (4K/MP3), 小红书 (视频/图片), Bilibili (合并流) 及 抖音 (无水印)。",
   "permissions": [
     "activeTab",
     "scripting",

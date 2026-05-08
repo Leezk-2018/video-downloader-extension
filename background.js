@@ -318,44 +318,130 @@ async function handleDouyinExtract(tabId) {
     });
     return res?.result;
   } catch (e) {
-    console.error('[BG] Douyin Extract Error:', e);
+    console.error('[PureDown] Douyin Extract Error:', e);
     return null;
   }
 }
 
 function extractDouyinMedia() {
-  try {
-    const renderData = document.getElementById('RENDER_DATA')?.textContent;
-    if (!renderData) return null;
-    
-    const data = JSON.parse(decodeURIComponent(renderData));
-    
-    // 递归搜索包含 playAddr 的对象
-    let videoData = null;
-    let title = document.title;
-    
-    function findVideo(obj) {
-      if (!obj || videoData) return;
-      if (typeof obj !== 'object') return;
+  return (async () => {
+    try {
+      const url = window.location.href;
+      const urlObj = new URL(url);
+      const targetId = urlObj.searchParams.get('modal_id') || url.match(/\/video\/(\d+)/)?.[1] || url.split('/').pop();
       
-      if (obj.playAddr && obj.cover) {
-        videoData = {
-          url: obj.playAddr.replace('playwm', 'play'), // 无水印
-          cover: obj.cover,
-          title: title
-        };
-        return;
+      let result = null;
+      let fallback = null;
+      const seen = new WeakSet();
+
+      // 验证是否为有效的视频或封面地址
+      const isMedia = (u) => {
+        if (!u || typeof u !== 'string' || u.startsWith('blob:')) return false;
+        return u.includes('http') && (u.includes('tos') || u.includes('aweme/v1/play') || u.includes('/video/') || u.includes('dy') || u.includes('tos-cn-p'));
+      };
+
+      // 清理并选择最佳 URL
+      const pickUrl = (obj) => {
+        if (!obj) return null;
+        if (typeof obj === 'string') {
+          const clean = obj.replace(/\\u002F/g, '/').replace(/\\u0026/g, '&').replace(/\\+$/, '').replace(/\/+$/, '');
+          return isMedia(clean) ? clean : null;
+        }
+        if (Array.isArray(obj)) return pickUrl(obj[0]);
+        if (typeof obj === 'object') {
+          const keys = ['url_list', 'urlList', 'play_addr', 'playAddr', 'download_addr', 'cover', 'origin_cover'];
+          for (const k of keys) {
+            const res = pickUrl(obj[k]);
+            if (res) return res;
+          }
+        }
+        return null;
+      };
+
+      // 递归扫描对象树
+      const walk = (obj, depth = 0) => {
+        if (!obj || result || depth > 30 || typeof obj !== 'object' || seen.has(obj)) return;
+        seen.add(obj);
+
+        const objId = String(obj.aweme_id || obj.itemId || obj.id || obj.awemeId || obj.group_id || obj.wid || '');
+        const isMatch = targetId && (objId === targetId || (targetId.includes(objId) && objId.length > 10));
+
+        const v = obj.video || (obj.play_addr ? obj : null);
+        if (v && (v.play_addr || v.playAddr || v.url_list)) {
+          const playUrl = pickUrl(v.play_addr || v.playAddr || v.url_list || v);
+          if (playUrl) {
+            const data = {
+              id: objId,
+              url: playUrl.replace('playwm', 'play').replace('http://', 'https://'),
+              cover: pickUrl(obj.cover || v.cover || v.origin_cover || obj.cover_addr) || '',
+              title: (obj.desc || obj.title || document.title).split('\n')[0].trim(),
+              author: obj.author?.nickname || obj.nickname || obj.user?.nickname || ''
+            };
+            if (isMatch) result = data;
+            else if (!fallback) fallback = data;
+          }
+        }
+
+        if (!result) {
+          for (const k in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, k)) walk(obj[k], depth + 1);
+          }
+        }
+      };
+
+      // 方案 1: SPA 专项扫描 (针对动态加载的弹窗)
+      if (window._ROUTER_DATA?.loaderData) {
+        const ld = window._ROUTER_DATA.loaderData;
+        for (const k in ld) if (k.includes(targetId) || k.includes('video')) walk(ld[k]);
       }
-      
-      for (let k in obj) {
-        findVideo(obj[k]);
+
+      // 方案 2: 全局变量扫描
+      if (!result) {
+        const globals = ['_ROUTER_DATA', 'RENDER_DATA', '__NEXT_DATA__', 'SSR_DATA'];
+        globals.forEach(g => { if (!result && window[g]) walk(window[g]); });
       }
+
+      // 方案 3: 脚本源码分析 (正则兜底)
+      if (!result && targetId) {
+        document.querySelectorAll('script').forEach(s => {
+          if (result || s.textContent.length < 100) return;
+          const content = s.textContent;
+          if (content.includes(targetId)) {
+            try {
+              const jsonMatch = content.match(/\{[\s\S]*\}/);
+              if (jsonMatch) walk(JSON.parse(jsonMatch[0]));
+            } catch(e){}
+            if (!result) {
+              const vidRegex = /"(https?:\/\/[^"]+?(?:v-tos|aweme\/v1\/play)[^"]+?)"/g;
+              const m = vidRegex.exec(content);
+              if (m && !fallback) {
+                const u = m[1].replace(/\\u002F/g, '/').replace(/\\u0026/g, '&').replace(/\\+$/, '');
+                fallback = { url: u.replace('playwm', 'play'), title: document.title, cover: '', author: '' };
+              }
+            }
+          }
+        });
+      }
+
+      // 方案 4: API 接口拨号 (针对彻底异步的情况)
+      if (!result && targetId && targetId.length > 10) {
+        try {
+          const api = `https://www.douyin.com/aweme/v1/web/aweme/detail/?aweme_id=${targetId}&device_platform=webapp&aid=6383`;
+          const resp = await fetch(api, { credentials: 'include' });
+          if (resp.ok) {
+            const text = await resp.text();
+            if (text.trim().startsWith('{')) {
+              const json = JSON.parse(text);
+              if (json?.aweme_detail) walk(json.aweme_detail);
+            }
+          }
+        } catch(e) {}
+      }
+
+      return result || fallback;
+    } catch (e) {
+      return null;
     }
-    
-    findVideo(data);
-    return videoData;
-  } catch (e) {
-    return null;
-  }
+  })();
 }
 
