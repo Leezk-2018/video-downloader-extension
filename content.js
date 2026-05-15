@@ -406,12 +406,12 @@
 
   function syncTaskUI(task) {
     let prefix = task.platform === 'youtube' ? 'yt' : (task.platform === 'bilibili' ? 'bili' : (task.platform === 'douyin' ? 'dy' : 'xhs'));
-    const btn = shadowRoot.getElementById(`${prefix}-download-btn`), wrap = shadowRoot.getElementById(`${prefix}-progress-wrap`), fill = shadowRoot.getElementById(`${prefix}-progress-fill`), lbl = shadowRoot.getElementById(`${prefix}-progress-label`);
+    const btn = shadowRoot.getElementById(`${prefix}-download-btn`), wrap = shadowRoot.getElementById(`${prefix}-progress-wrap`), fill = shadowRoot.getElementById(`${prefix}-progress-fill`), lbl = shadowRoot.getElementById(`${prefix}-progress-label`), errorMsg = shadowRoot.getElementById(`${prefix}-error-msg`);
     if (!btn || !wrap) return;
     if (task.active) floatBtn?.classList.add('pulse-active'); else floatBtn?.classList.remove('pulse-active');
-    if (task.error) { shadowRoot.getElementById(`${prefix}-error-msg`).textContent = '❌ ' + task.error; shadowRoot.getElementById(`${prefix}-error-msg`).classList.add('show'); btn.disabled = false; btn.classList.remove('loading'); }
-    else if (task.progress === 100) { fill.style.width = '100%'; lbl.textContent = task.text; btn.classList.remove('loading'); btn.style.background = '#34C759'; setTimeout(() => { btn.disabled = false; btn.style.background = ''; wrap.classList.remove('show'); }, 3000); }
-    else { btn.disabled = true; btn.classList.add('loading'); wrap.classList.add('show'); fill.style.width = task.progress + '%'; lbl.textContent = task.text; }
+    if (task.error) { if (errorMsg) { errorMsg.textContent = '❌ ' + task.error; errorMsg.classList.add('show'); } btn.disabled = false; btn.classList.remove('loading'); }
+    else if (task.progress === 100) { if (errorMsg) { errorMsg.textContent = ''; errorMsg.classList.remove('show'); } fill.style.width = '100%'; lbl.textContent = task.text; btn.classList.remove('loading'); btn.style.background = '#34C759'; setTimeout(() => { btn.disabled = false; btn.style.background = ''; wrap.classList.remove('show'); }, 3000); }
+    else { if (errorMsg) { errorMsg.textContent = ''; errorMsg.classList.remove('show'); } btn.disabled = true; btn.classList.add('loading'); wrap.classList.add('show'); fill.style.width = task.progress + '%'; lbl.textContent = task.text; }
   }
 
   init();
