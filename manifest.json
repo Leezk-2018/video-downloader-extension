@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "PureDown Pro",
   "version": "3.0.0",
-  "description": "支持 YouTube、YouTube Shorts、小红书视频一键下载",
+  "description": "全能视频下载助手：支持 YouTube (4K/MP3), 小红书 (视频/图片), Bilibili (合并流) 及 抖音 (无水印)。",
   "permissions": [
     "activeTab",
     "scripting",
@@ -16,8 +16,13 @@
   "host_permissions": [
     "https://www.youtube.com/*",
     "https://www.xiaohongshu.com/*",
+    "https://*.bilibili.com/*",
+    "https://*.bilivideo.com/*",
+    "https://*.bilivideo.cn/*",
+    "https://*.mountaintoys.cn/*",
     "https://loader.to/*",
-    "https://p.savenow.to/*"
+    "https://p.savenow.to/*",
+    "https://www.douyin.com/*"
   ],
   "web_accessible_resources": [
     {
@@ -38,7 +43,9 @@
       "matches": [
         "https://www.youtube.com/watch*",
         "https://www.youtube.com/shorts/*",
-        "https://www.xiaohongshu.com/*"
+        "https://www.xiaohongshu.com/*",
+        "https://www.bilibili.com/video/*",
+        "https://www.douyin.com/*"
       ],
       "js": ["content.js"],
       "css": ["content.css"]

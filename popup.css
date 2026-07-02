@@ -98,6 +98,12 @@ h1 span {
   to { opacity: 1; transform: translateY(0); }
 }
 
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Media Cards - 允许水平布局 */
 .media-card {
   background: var(--bg-card);
@@ -439,3 +445,12 @@ h1 span {
 }
 
 .app-footer p { font-size: 9px; font-weight: 700; color: #AEAEB2; text-transform: uppercase; letter-spacing: 1px; }
+
+/* Douyin Specific */
+#state-douyin .main-btn {
+  background: linear-gradient(135deg, #FE2C55, #25F4EE);
+  box-shadow: 0 4px 12px rgba(254, 44, 85, 0.2);
+}
+#state-douyin .type-tag {
+  color: #FE2C55 !important;
+}
